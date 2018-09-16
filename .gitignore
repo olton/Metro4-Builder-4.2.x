@@ -75,6 +75,6 @@ Docs.js
 *.ftpauth
 *.nupkg
 /package-lock.json
-sourse/less
-sourse/js
-sourse/icons
+source/less
+source/js
+source/icons

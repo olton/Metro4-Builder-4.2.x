@@ -1,5 +1,5 @@
 /*
- * Metro 4 Components Library v4.2.21 build @@build (https://metroui.org.ua)
+ * Metro 4 Components Library v4.2.22 build 699 (https://metroui.org.ua)
  * Copyright 2018 Sergey Pimenov
  * Licensed under MIT
  */
@@ -88,8 +88,8 @@ var isTouch = (('ontouchstart' in window) || (navigator.MaxTouchPoints > 0) || (
 
 var Metro = {
 
-    version: "@@version",
-    versionFull: "@@version.@@build @@status",
+    version: "4.2.22",
+    versionFull: "4.2.22.699 ",
     isTouchable: isTouch,
     fullScreenEnabled: document.fullscreenEnabled,
     sheet: null,
@@ -170,12 +170,18 @@ var Metro = {
         change: 'change.metro',
         cut: 'cut.metro',
         paste: 'paste.metro',
-        drop: 'drop.metro',
         scroll: 'scroll.metro',
         scrollStart: 'scrollstart.metro',
         scrollStop: 'scrollstop.metro',
         mousewheel: 'mousewheel.metro',
-        inputchange: "change.metro input.metro propertychange.metro cut.metro paste.metro copy.metro"
+        inputchange: "change.metro input.metro propertychange.metro cut.metro paste.metro copy.metro",
+        dragstart: "dragstart.metro",
+        dragend: "dragend.metro",
+        dragenter: "dragenter.metro",
+        dragover: "dragover.metro",
+        dragleave: "dragleave.metro",
+        drop: 'drop.metro',
+        drag: 'drag.metro'
     },
 
     keyCode: {
@@ -4675,7 +4681,7 @@ var Audio = {
             this.play();
         }
 
-        Utils.exec(o.onAudioCreate, [element, this.player]);
+        Utils.exec(o.onAudioCreate, [element, this.player], element[0]);
     },
 
     _createPlayer: function(){
@@ -4827,7 +4833,7 @@ var Audio = {
         element.on("loadedmetadata", function(){
             that.duration = audio.duration.toFixed(0);
             that._setInfo(0, that.duration);
-            Utils.exec(o.onMetadata, [audio, player]);
+            Utils.exec(o.onMetadata, [audio, player], element[0]);
         });
 
         element.on("canplay", function(){
@@ -4843,7 +4849,7 @@ var Audio = {
             var position = Math.round(audio.currentTime * 100 / that.duration);
             that._setInfo(audio.currentTime, that.duration);
             that.stream.data('slider').val(position);
-            Utils.exec(o.onTime, [audio.currentTime, that.duration, audio, player]);
+            Utils.exec(o.onTime, [audio.currentTime, that.duration, audio, player], element[0]);
         });
 
         element.on("waiting", function(){
@@ -4856,22 +4862,22 @@ var Audio = {
 
         element.on("play", function(){
             player.find(".play").html(o.pauseIcon);
-            Utils.exec(o.onPlay, [audio, player]);
+            Utils.exec(o.onPlay, [audio, player], element[0]);
         });
 
         element.on("pause", function(){
             player.find(".play").html(o.playIcon);
-            Utils.exec(o.onPause, [audio, player]);
+            Utils.exec(o.onPause, [audio, player], element[0]);
         });
 
         element.on("stop", function(){
             that.stream.data('slider').val(0);
-            Utils.exec(o.onStop, [audio, player]);
+            Utils.exec(o.onStop, [audio, player], element[0]);
         });
 
         element.on("ended", function(){
             that.stream.data('slider').val(0);
-            Utils.exec(o.onEnd, [audio, player]);
+            Utils.exec(o.onEnd, [audio, player], element[0]);
         });
 
         element.on("volumechange", function(){
@@ -5304,7 +5310,7 @@ var Calendar = {
         }
 
 
-        if (this.options.ripple === true) {
+        if (o.ripple === true && Utils.isFunc(element.ripple) !== false) {
             element.ripple({
                 rippleTarget: ".button, .prev-month, .next-month, .prev-year, .next-year, .day",
                 rippleColor: this.options.rippleColor
@@ -9762,7 +9768,10 @@ var File = {
         return this;
     },
     options: {
+        mode: "input",
         buttonTitle: "Choose file(s)",
+        dropTitle: "<strong>Choose a file</strong> or drop it here",
+        dropIcon: "<span class='default-icon-upload'></span>",
         prepend: "",
         clsComponent: "",
         clsPrepend: "",
@@ -9796,9 +9805,9 @@ var File = {
         var that = this, element = this.element, o = this.options;
         var prev = element.prev();
         var parent = element.parent();
-        var container = $("<div>").addClass("file " + element[0].className).addClass(o.clsComponent);
+        var container = $("<label>").addClass((o.mode === "input" ? " file " : " drop-zone ") + element[0].className).addClass(o.clsComponent);
         var caption = $("<span>").addClass("caption").addClass(o.clsCaption);
-        var button;
+        var icon, button;
 
         if (prev.length === 0) {
             parent.prepend(container);
@@ -9807,22 +9816,28 @@ var File = {
         }
 
         element.appendTo(container);
-        caption.insertBefore(element);
 
-        button = $("<button>").addClass("button").attr("tabindex", -1).attr("type", "button").html(o.buttonTitle);
-        button.appendTo(container);
-        button.addClass(o.clsButton);
+        if (o.mode === "input") {
+            caption.insertBefore(element);
 
-        if (element.attr('dir') === 'rtl' ) {
-            container.addClass("rtl");
+            button = $("<button>").addClass("button").attr("tabindex", -1).attr("type", "button").html(o.buttonTitle);
+            button.appendTo(container);
+            button.addClass(o.clsButton);
+
+            if (element.attr('dir') === 'rtl' ) {
+                container.addClass("rtl");
+            }
+
+            if (o.prepend !== "") {
+                var prepend = $("<div>").html(o.prepend);
+                prepend.addClass("prepend").addClass(o.clsPrepend).appendTo(container);
+            }
+        } else {
+            icon = $(o.dropIcon).addClass("icon").appendTo(container);
+            caption.html(o.dropTitle).insertAfter(icon);
         }
 
         element[0].className = '';
-
-        if (o.prepend !== "") {
-            var prepend = $("<div>").html(o.prepend);
-            prepend.addClass("prepend").addClass(o.clsPrepend).appendTo(container);
-        }
 
         if (o.copyInlineStyles === true) {
             for (var i = 0, l = element[0].style.length; i < l; i++) {
@@ -9839,11 +9854,13 @@ var File = {
 
     _createEvents: function(){
         var element = this.element, o = this.options;
-        var parent = element.parent();
-        var caption = parent.find(".caption");
-        parent.on(Metro.events.click, "button, .caption", function(){
+        var container = element.closest("label");
+        var caption = container.find(".caption");
+
+        container.on(Metro.events.click, "button", function(){
             element.trigger("click");
         });
+
         element.on(Metro.events.change, function(){
             var fi = this;
             var file_names = [];
@@ -9856,13 +9873,39 @@ var File = {
                 file_names.push(file.name);
             });
 
-            entry = file_names.join(", ");
+            if (o.mode === "input") {
 
-            caption.html(entry);
-            caption.attr('title', entry);
+                entry = file_names.join(", ");
+
+                caption.html(entry);
+                caption.attr('title', entry);
+            }
 
             Utils.exec(o.onSelect, [fi.files, element], element[0]);
         });
+
+        element.on(Metro.events.focus, function(){container.addClass("focused");});
+        element.on(Metro.events.blur, function(){container.removeClass("focused");});
+
+        if (o.mode !== "input") {
+            container.on('drag dragstart dragend dragover dragenter dragleave drop', function(e){
+                e.preventDefault();
+                e.stopPropagation();
+            });
+
+            container.on('dragenter dragover', function(){
+                container.addClass("drop-on");
+            });
+
+            container.on('dragleave', function(){
+                container.removeClass("drop-on");
+            });
+
+            container.on('drop', function(e){
+                element[0].files = e.originalEvent.dataTransfer.files;
+                container.removeClass("drop-on");
+            });
+        }
     },
 
     disable: function(){
@@ -14260,6 +14303,7 @@ var Select = {
         dropHeight: 200,
 
         clsSelect: "",
+        clsSelectInput: "",
         clsPrepend: "",
         clsAppend: "",
         clsOption: "",
@@ -14354,7 +14398,7 @@ var Select = {
 
         var prev = element.prev();
         var parent = element.parent();
-        var container = $("<div>").addClass("select " + element[0].className).addClass(o.clsSelect);
+        var container = $("<label>").addClass("select " + element[0].className).addClass(o.clsSelect);
         var multiple = element[0].multiple;
         var select_id = Utils.elementId("select");
         var buttons = $("<div>").addClass("button-group");
@@ -14375,7 +14419,7 @@ var Select = {
         element.appendTo(container);
         buttons.appendTo(container);
 
-        input = $("<div>").addClass("select-input").attr("name", "__" + select_id + "__");
+        input = $("<div>").addClass("select-input").addClass(o.clsSelectInput).attr("name", "__" + select_id + "__");
         drop_container = $("<div>").addClass("drop-container");
         list = $("<ul>").addClass("d-menu").addClass(o.clsDropList).css({
             "max-height": o.dropHeight
@@ -14466,6 +14510,14 @@ var Select = {
         var input = element.siblings(".select-input");
         var filter_input = drop_container.find("input");
         var list = drop_container.find("ul");
+
+        element.on(Metro.events.focus, function(){
+            container.addClass("focused");
+        });
+
+        element.on(Metro.events.blur, function(){
+            container.removeClass("focused");
+        });
 
         container.on(Metro.events.click, function(e){
             e.preventDefault();
@@ -16854,6 +16906,7 @@ var Table = {
         clsBody: "",
         clsBodyRow: "",
         clsBodyCell: "",
+        clsCellWrapper: "",
 
         clsFooter: "",
         clsFooterRow: "",
@@ -17152,7 +17205,8 @@ var Table = {
                 cls: item_class,
                 colspan: item.attr("colspan"),
                 type: "data",
-                size: Utils.isValue(item.data("size")) ? item.data("size") : ""
+                size: Utils.isValue(item.data("size")) ? item.data("size") : "",
+                show: !item.hasClass("hidden") || (Utils.isValue(item.data("show")) && JSON.parse(item.data("show")) === false)
             };
             that.heads.push(head_item);
         });
@@ -18030,7 +18084,7 @@ var Table = {
                 $.each(cells, function(cell_index){
                     if (o.cellWrapper === true) {
                         td = $("<td>");
-                        $("<div>").addClass("cell-wrapper").html(this).appendTo(td);
+                        $("<div>").addClass("cell-wrapper").addClass(o.clsCellWrapper).html(this).appendTo(td);
                     } else {
                         td = $("<td>").html(this);
                     }
@@ -20725,7 +20779,7 @@ var Video = {
             this.play();
         }
 
-        Utils.exec(o.onVideoCreate, [element, this.player]);
+        Utils.exec(o.onVideoCreate, [element, this.player], element[0]);
     },
 
     _createPlayer: function(){
@@ -20891,7 +20945,7 @@ var Video = {
         element.on("loadedmetadata", function(){
             that.duration = video.duration.toFixed(0);
             that._setInfo(0, that.duration);
-            Utils.exec(o.onMetadata, [video, player]);
+            Utils.exec(o.onMetadata, [video, player], element[0]);
         });
 
         element.on("canplay", function(){
@@ -20907,7 +20961,7 @@ var Video = {
             var position = Math.round(video.currentTime * 100 / that.duration);
             that._setInfo(video.currentTime, that.duration);
             that.stream.data('slider').val(position);
-            Utils.exec(o.onTime, [video.currentTime, that.duration, video, player]);
+            Utils.exec(o.onTime, [video.currentTime, that.duration, video, player], element[0]);
         });
 
         element.on("waiting", function(){
@@ -20920,25 +20974,25 @@ var Video = {
 
         element.on("play", function(){
             player.find(".play").html(o.pauseIcon);
-            Utils.exec(o.onPlay, [video, player]);
+            Utils.exec(o.onPlay, [video, player], element[0]);
             that._onMouse();
         });
 
         element.on("pause", function(){
             player.find(".play").html(o.playIcon);
-            Utils.exec(o.onPause, [video, player]);
+            Utils.exec(o.onPause, [video, player], element[0]);
             that._offMouse();
         });
 
         element.on("stop", function(){
             that.stream.data('slider').val(0);
-            Utils.exec(o.onStop, [video, player]);
+            Utils.exec(o.onStop, [video, player], element[0]);
             that._offMouse();
         });
 
         element.on("ended", function(){
             that.stream.data('slider').val(0);
-            Utils.exec(o.onEnd, [video, player]);
+            Utils.exec(o.onEnd, [video, player], element[0]);
             that._offMouse();
         });
 

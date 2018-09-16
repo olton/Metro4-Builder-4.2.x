@@ -1,0 +1,43 @@
+@import (once) "include/vars";
+@import (once) "include/mixins";
+
+.step-list {
+    margin: 0 0 0 2rem;
+    padding: 0;
+    list-style-type: none;
+    counter-reset:li;
+
+    & > li {
+        border-left: 1px #ccc solid;
+        position: relative;
+        padding: 0 .625rem;
+        margin: .625rem;
+        vertical-align: top;
+    }
+
+    & > li:before {
+        position: absolute;
+        content:counter(li);
+        counter-increment:li;
+        font-size: 2rem;
+        color: @lightGray;
+        left: 0;
+        top: .3125rem;
+        margin-left: -1.5rem;
+    }
+}
+
+.custom-list-marker {
+    li {
+        position: relative;
+        padding-left: 1.2em;
+
+        &::before {
+            content: attr(data-marker);
+            position: absolute;
+            left: 0;
+            top: 50%;
+            .translateY(-50%);
+        }
+    }
+}

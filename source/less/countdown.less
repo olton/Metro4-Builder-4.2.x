@@ -1,0 +1,75 @@
+@import (once) "include/vars";
+@import (once) "include/mixins";
+
+.countdown {
+    display: flex;
+    flex-flow: row nowrap;
+    position: relative;
+    width: 100%;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+.countdown {
+    .part {
+        position: relative;
+        display: flex;
+        flex-flow: row nowrap;
+        justify-content: center;
+        min-width: 2rem;
+        padding-bottom: .5rem;
+        flex-shrink: 0;
+        flex-grow: 0;
+        padding-left: .5em;
+        padding-right: .5em;
+    }
+
+    .part {
+        &::before {
+            content: ":";
+            left: -.25em;
+            position: absolute;
+            color: @gray;
+        }
+
+        &:nth-child(1), &.no-divider {
+            &::before {
+                display: none;
+            }
+        }
+    }
+
+    .part {
+        &.days, &.hours, &.minutes, &.seconds {
+            &::after {
+                position: absolute;
+                content: attr(data-label);
+                text-align: center;
+                bottom: .25rem;
+                left: 0;
+                width: 100%;
+                font-size: .3em;
+                color: inherit;
+            }
+        }
+    }
+
+    .part + .part {
+        margin-left: .625rem;
+    }
+
+    .days {order: 1;}
+    .hours {order: 2;}
+    .minutes {order: 3;}
+    .seconds {order: 4;}
+}
+
+.countdown {
+    &.blink {
+        .part {
+            &::before {
+                display: none;
+            }
+        }
+    }
+}

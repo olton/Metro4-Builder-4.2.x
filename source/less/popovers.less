@@ -1,0 +1,20 @@
+@import (once) "include/vars";
+@import (once) "include/mixins";
+
+.popover {
+    display: block;
+    min-width: 12.5rem;
+    height: auto;
+    position: fixed;
+    background-color: @white;
+    color: @dark;
+    z-index: @zindex-popover;
+    border: 1px solid @borderColor;
+    cursor: default;
+    padding: .8125rem;
+    max-width: ~"calc(100% - 32px)";
+
+    & > * {
+        max-width: 100%;
+    }
+}

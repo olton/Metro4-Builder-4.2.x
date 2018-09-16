@@ -1,0 +1,71 @@
+@import (once) "include/vars";
+@import (once) "include/mixins";
+
+@taginput-item-size: 26px;
+
+.tag-input {
+    display: flex;
+    flex-flow: row wrap;
+    justify-content: start;
+    align-items: center;
+    width: 100%;
+    padding: 0 2px;
+    cursor: text;
+    position: relative;
+    height: auto;
+    min-height: @inputHeight;
+
+    .original-input {
+        width: 1px;
+        height: 1px;
+        position: absolute;
+        top: 0;
+        left: 0;
+        opacity: 0;
+    }
+
+    .input-wrapper {
+        width: auto;
+        border: none!important;
+        height: @taginput-item-size;
+        line-height: @taginput-item-size;
+        font-size: 14px;
+        padding: 0 4px;
+        &:focus {
+            box-shadow: none!important;
+        }
+    }
+
+    .tag {
+        display: inline-flex;
+        justify-content: space-between;
+        align-items: start;
+        position: relative;
+        margin: 2px;
+        padding: 0 0 0 4px;
+        height: @taginput-item-size;
+        line-height: @taginput-item-size;
+        background-color: @light;
+        cursor: default;
+
+        .title {
+            display: block;
+            position: relative;
+            max-width: 120px;
+            font-size: 14px;
+            .text-ellipsis();
+            margin-right: 4px;
+        }
+
+        .remover {
+            display: block;
+            position: relative;
+            width: @taginput-item-size;
+            height: 100%;
+            line-height: @taginput-item-size - 2;
+            text-align: center;
+            cursor: pointer;
+            background-color: @lightGray;
+        }
+    }
+}

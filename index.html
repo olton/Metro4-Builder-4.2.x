@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <meta name="twitter:site" content="@metroui">
+    <meta name="twitter:creator" content="@pimenov_sergey">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Metro 4 Builder">
+    <meta name="twitter:description" content="Create your one Metro 4 components set. Metro 4 is an open source toolkit for developing with HTML, CSS, and JS. Quickly prototype your ideas or build your entire app with responsive grid system, extensive prebuilt components, and powerful plugins built on jQuery.">
+    <meta name="twitter:image" content="https://metroui.org.ua/images/m4-logo-social.png">
+
+    <meta property="og:url" content="https://metroui.org.ua/v4/index.html">
+    <meta property="og:title" content="Metro 4 Builder">
+    <meta property="og:description" content="Create your one Metro 4 components set. Metro 4 is an open source toolkit for developing with HTML, CSS, and JS. Quickly prototype your ideas or build your entire app with responsive grid system, extensive prebuilt components, and powerful plugins built on jQuery.">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="https://metroui.org.ua/images/m4-logo-social.png">
+    <meta property="og:image:secure_url" content="https://metroui.org.ua/images/m4-logo-social.png">
+    <meta property="og:image:type" content="image/png">
+    <meta property="og:image:width" content="968">
+    <meta property="og:image:height" content="504">
+
+    <meta name="author" content="Sergey Pimenov">
+    <meta name="description" content="Create your one Metro 4 components set. Metro 4 - the popular framework for building responsive, mobile-first sites in Metro style, with the Metro CDN and a template starter page. The most popular HTML, CSS, and JS library in Metro style.">
+    <meta name="keywords" content="HTML, CSS, JS, Metro, CSS3, Javascript, HTML5, UI, Library, Web, Development, Framework">
+
+    <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+
+    <link href="vendors/metro/css/metro-all.css" rel="stylesheet">
+    <link href="css/builder.css" rel="stylesheet">
+
+    <title>Builder :: Metro 4 - Popular HTML, CSS and JS library</title>
+</head>
+<body>
+
+<div class="container-fluid bg-darkMagenta fg-white pos-fixed fixed-top z-top">
+    <header class="app-bar container bg-darkMagenta fg-white pos-relative" data-role="appbar" data-expand-point="md">
+        <a href="/" class="brand fg-white no-hover">Metro 4 Builder</a>
+        <ul class="app-bar-menu ml-auto">
+            <li><a href="https://metroui.org.ua/index.html">Home</a></li>
+            <li><a href="https://metroui.org.ua/intro.html">Guide</a></li>
+            <li><a href="https://metroui.org.ua/examples.html">Examples</a></li>
+            <li><a href="https://metroui.org.ua/sponsors.html">Sponsors</a></li>
+            <li><a href="https://forum.metroui.org.ua">Forum</a></li>
+            <li><a href="https://github.com/olton/Metro-UI-CSS" target="_blank">Github</a></li>
+        </ul>
+    </header>
+</div>
+
+<div class="hero hero-bg text-center neb neb-hero z-1">
+
+    <h1 class="fg-white mt-10"><span class="reduce-1 enlarge-1-md">Metro 4 Builder</span><small class="fg-yellow"> alpha</small></h1>
+    <div class="container mt-2 text-leader fg-white pl-5-fs pr-5-fs pl-20-md pr-20-md">
+        <p class=" reduce-1 enlarge-1-md">
+            create your one <strong>Metro 4</strong> components set
+        </p>
+        <p class="text-small">&lt;<span class="version-number">...</span>&gt;</p>
+    </div>
+
+</div>
+
+<div class="bg-light p-10 mb-4 text-center">
+    This is an alpha version. There is a phase of testing and detection of dependencies.
+    <br>If you have assembled the assembly and it does not work, write to the forum at
+    <br><a class="fg-cyan" href="https://forum.metroui.org.ua">https://forum.metroui.org.ua</a>
+    <br>with the log of the browser console.
+</div>
+
+<div class="container-fluid">
+    <div class="container mb-4">
+
+        <!-- ads-html -->
+
+        <main>
+            <form action="javascript:" onsubmit="App.submit(this)">
+
+                <div id="items-container"></div>
+
+                <hr class="mb-2">
+                <div id="options">
+                    <input id="min_checkbox" type="checkbox" data-role="switch" data-caption="Minified" name="minified" value="1" onclick="$('#map_checkbox').prop('disabled', !$(this).is(':checked'))">
+                    <input id="map_checkbox" type="checkbox" data-role="switch" data-caption="Source map" name="source_map" value="1" disabled>
+                </div>
+                <hr class="mb-6">
+                <div id="actions">
+                    <button class="button primary">Build your set</button>
+                </div>
+            </form>
+        </main>
+    </div>
+</div>
+
+<footer class="footer-bg">
+    <div class="container pt-20 pb-20">
+        <div class="text-center">
+            <ul class="inline-list reduce-1" id="social-menu">
+                <li><a href="https://www.facebook.com/metrouicss/"><span class="mif-facebook"></span></a></li>
+                <li><a href="https://twitter.com/MetroUI"><span class="mif-twitter"></span></a></li>
+                <li><a href="#"><span class="mif-youtube"></span></a></li>
+                <li><a href="https://github.com/olton/Metro-UI-CSS"><span class="mif-github"></span></a></li>
+            </ul>
+        </div>
+
+        <div class="text-center mt-10">
+            <ul class="inline-list reduce-1" id="footer-menu">
+                <li><a href="https://github.com/olton/Metro-UI-CSS/blob/master/LICENSE">License</a></li>
+                <li><a href="mailto:sergey@pimenov.com.ua">Author</a></li>
+                <li><a href="https://forum.metroui.org.ua">Forum</a></li>
+                <li><a href="https://github.com/olton/Metro-UI-CSS/issues">Issues</a></li>
+                <li><a href="https://github.com/olton/Metro-UI-CSS/releases">Releases</a></li>
+            </ul>
+        </div>
+
+        <div class="text-center m-10">
+            <span class="h2"><span class="fg-cyan">Made in </span><span class="fg-yellow">Ukraine</span></span>
+        </div>
+
+        <div class="text-center mt-10 reduce-1">
+            Metro 4 (Metro UI CSS) &copy; 2012-2018 by <a href="mailto:sergey@pimenov.com.ua" class="no-wrap">Sergey Pimenov</a>.
+            <br />
+            <span class="no-wrap">Domain by <a href="https://imena.ua/">Imena.ua</a>.</span>
+            <span class="no-wrap">Hosting by <a href="https://mirohost.net/">Mirohost</a>.</span>
+            <br/>
+            <span class="no-wrap">Metro CDN by <a href="https://www.keycdn.com/">KeyCDN</a>.</span>
+            <br/>
+            <span class="no-wrap">IDE PhpStorm by <a href="https://www.jetbrains.com/">JetBrains</a>.</span>
+            <br />
+            Currently <span class="version-number"></span>. Code licensed <a href="https://github.com/olton/Metro-UI-CSS/blob/master/LICENSE">MIT</a>, docs <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a>.
+        </div>
+    </div>
+</footer>
+
+<script src="vendors/jquery/jquery-3.3.1.min.js"></script>
+<script src="vendors/metro/js/metro.min.js"></script>
+<script src="js/builder.js"></script>
+<script>
+    $(".version-number").html(Metro.ver());
+</script>
+<!-- ads-script -->
+<!-- ga-script -->
+
+<!-- hit.ua -->
+<a href='http://hit.ua/?x=66801' target='_blank'>
+    <script language="javascript" type="text/javascript"><!--
+    Cd=document;Cr="&"+Math.random();Cp="&s=1";
+    Cd.cookie="b=b";if(Cd.cookie)Cp+="&c=1";
+    Cp+="&t="+(new Date()).getTimezoneOffset();
+    if(self!=top)Cp+="&f=1";
+    //--></script>
+    <script language="javascript1.1" type="text/javascript"><!--
+    if(navigator.javaEnabled())Cp+="&j=1";
+    //--></script>
+    <script language="javascript1.2" type="text/javascript"><!--
+    if(typeof(screen)!='undefined')Cp+="&w="+screen.width+"&h="+
+        screen.height+"&d="+(screen.colorDepth?screen.colorDepth:screen.pixelDepth);
+    //--></script>
+    <script language="javascript" type="text/javascript"><!--
+    Cd.write("<sc"+"ript src='//c.hit.ua/hit?i=66801&g=0&x=3"+Cp+Cr+
+        "&r="+escape(Cd.referrer)+"&u="+escape(window.location.href)+"'></sc"+"ript>");
+    //--></script></a>
+<!-- / hit.ua -->
+
+</body>
+</html>

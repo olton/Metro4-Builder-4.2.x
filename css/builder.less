@@ -1,0 +1,126 @@
+@import (once) "../../Metro4/less/include/vars";
+@import (once) "../../Metro4/less/include/mixins";
+
+:root {}
+
+main {
+    padding-bottom: 20px!important;
+}
+
+body {
+    padding-top: 50px;
+}
+
+.hero-bg {
+    background: rgba(140,0,75,1);
+    background: -moz-linear-gradient(top, rgba(140,0,75,1) 0%, rgba(217,52,195,1) 100%);
+    background: -webkit-gradient(left top, left bottom, color-stop(0%, rgba(140,0,75,1)), color-stop(100%, rgba(217,52,195,1)));
+    background: -webkit-linear-gradient(top, rgba(140,0,75,1) 0%, rgba(217,52,195,1) 100%);
+    background: -o-linear-gradient(top, rgba(140,0,75,1) 0%, rgba(217,52,195,1) 100%);
+    background: -ms-linear-gradient(top, rgba(140,0,75,1) 0%, rgba(217,52,195,1) 100%);
+    background: linear-gradient(to bottom, rgba(140,0,75,1) 0%, rgba(217,52,195,1) 100%);
+    filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#8c004b', endColorstr='#d934c3', GradientType=0 );
+}
+
+.hero {
+    padding: 40px;
+}
+
+.neb-hero {
+    &.neb::before {
+        display: none!important;
+    }
+
+    &.neb::after {
+        display: block;
+        content: "";
+        width: 0;
+        height: 0;
+        border-style: solid;
+        border-width: 24px 24px 0 24px;
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+}
+
+
+.neb-hero::after {
+    border-color: rgba(217,52,195,1) transparent transparent transparent;
+}
+
+footer {
+    p {
+        font-size: 12px;
+    }
+    p a {
+        color: @dark;
+        font-weight: bold;
+    }
+}
+
+.footer-bg {
+    background-color: #3F3F3F;
+    color: #909090;
+}
+
+footer a {
+    color: #909090;
+    text-decoration: none!important;
+}
+
+footer a:hover {
+    color: #c9c9c9;
+}
+
+#social-menu li {
+    margin: 0 20px;
+}
+
+#footer-menu li {
+    margin: 0 20px;
+}
+
+.items-part {
+    margin: 20px 0;
+}
+
+@media all and (min-width: 768px) {
+    .hero {
+        padding: 80px 80px 80px;
+    }
+
+    .neb-white {
+        height: auto;
+    }
+
+}
+
+@media screen and (-ms-high-contrast: active), screen and (-ms-high-contrast: none) {
+    header {
+        position: fixed!important;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 10000;
+    }
+
+    body {
+        padding-top: 64px;
+    }
+}
+
+@supports (-ms-ime-align:auto) {
+    header {
+        position: fixed!important;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 10000;
+    }
+
+    body {
+        padding-top: 64px;
+    }
+}

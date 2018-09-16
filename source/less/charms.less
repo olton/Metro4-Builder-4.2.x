@@ -1,0 +1,52 @@
+@import (once) "include/vars";
+@import (once) "include/mixins";
+
+.charms {
+    display: block;
+    position: fixed;
+    z-index: @zindex-charms;
+    background-color: @dark;
+    color: @white;
+    transition: @transition-transform;
+}
+
+.charms {
+    &.top-side {
+        bottom: 100%;
+        width: 100%;
+        left: 0;
+
+        &.open {
+            transform: translateY(100%);
+        }
+    }
+    &.bottom-side {
+        top: 100%;
+        left: 0;
+        width: 100%;
+
+        &.open {
+            transform: translateY(-100%);
+        }
+    }
+    &.left-side {
+        top: 0;
+        bottom: 0;
+        right: 100%;
+        width: auto;
+
+        &.open {
+            transform: translateX(100%);
+        }
+    }
+    &.right-side {
+        top: 0;
+        bottom: 0;
+        width: auto;
+        left: 100%;
+
+        &.open {
+            transform: translateX(-100%);
+        }
+    }
+}

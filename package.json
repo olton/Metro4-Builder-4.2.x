@@ -1,0 +1,33 @@
+{
+  "author": "Sergey Pimenov",
+  "name": "metro4-builder",
+  "version": "4.2.22",
+  "build": "698",
+  "version_suffix": "",
+  "description": "Metro 4 Builder",
+  "keywords": [
+    "metro",
+    "css",
+    "less",
+    "mobile-first",
+    "responsive",
+    "front-end",
+    "framework",
+    "web",
+    "mobile",
+    "cordova",
+    "phonegap"
+  ],
+  "homepage": "https://builder.metroui.org.ua",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/olton/Metro4-Builder.git"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "jquery": ">=3.0.0",
+    "less": "^3.8.1",
+    "less-plugin-clean-css": "^1.5.1",
+    "uglify-js": "^3.4.9"
+  }
+}

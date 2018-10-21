@@ -28,10 +28,10 @@ var App = {
             $.each(config[key], function(part_key, part_data){
                 var part = $("<div>").addClass("items-part " + "part-"+part_key).appendTo(group);
                 var part_title = $("<h5>").html(config.parts[part_key]).appendTo(part);
-                var part_select = $("<input type='checkbox' data-role='checkbox' onclick='App.selectAll(this)'>").appendTo(part_title);
+                var part_select = $("<input type='checkbox' data-style='2' data-role='checkbox' onclick='App.selectAll(this)'>").appendTo(part_title);
 
                 $.each(part_data, function(item_key, item_data){
-                    var element = $("<input name='item[]' type='checkbox' data-role='checkbox' data-caption='"+item_data.name+"' value='"+item_key+"'>");
+                    var element = $("<input name='item[]' data-style='2' type='checkbox' data-role='checkbox' data-caption='"+item_data.name+"' value='"+item_key+"'>");
                     element.addClass("part-element w-100 w-50-sm w-25-lg").appendTo(part);
                 })
             })
@@ -39,10 +39,20 @@ var App = {
     },
 
     submit: function (form) {
+        var activity = Metro.activity.open({
+            type: 'square',
+            overlayColor: '#fff',
+            overlayAlpha: 1,
+            text: '<div class=\'mt-2 text-small\'>The assembly is started...<br>Please, wait...</div>',
+            overlayClickClose: true
+        });
+        form.custom_less.value = lessEditor.getValue();
+        form.custom_js.value = jsEditor.getValue();
         $.post(
             "builder.php",
             $(form).serialize(),
             function(response){
+                Metro.activity.close(activity);
                 if (response.result) {
                     console.log(response.message);
                     document.location.href = response.data.href;

@@ -243,6 +243,15 @@
                 "name": "Breadcrumbs",
                 "less": ["breadcrumbs"]
             },
+            "bottom_nav_comp": {
+                "name": "Bottom navigation",
+                "less": ["bottom-nav"]
+            },
+            "bottom_sheet_comp":{
+                "name": "Bottom sheet",
+                "less": ["bottom-sheet"],
+                "js": ["plugins/bottom-sheet"]
+            },
             "calendar_comp":{
                 "name": "Calendar",
                 "less": ["calendar"],
@@ -284,6 +293,10 @@
                 "name": "Checkbox",
                 "less": ["checkbox"],
                 "js": ["plugins/checkbox"]
+            },
+            "chips_comp":{
+                "name": "Chips",
+                "less": ["chips"]
             },
             "clock_comp":{
                 "name": "Clock",
@@ -365,6 +378,20 @@
                 "less": ["hint"],
                 "js": ["plugins/hint"]
             },
+            "head_bar_css": {
+                "name": "Head bar",
+                "less": ["head-bar"]
+            },
+            "image_compare_comp":{
+                "name": "Image compare",
+                "less": ["image-compare"],
+                "js": ["plugins/image-compare"]
+            },
+            "image_magnifier_comp":{
+                "name": "Image magnifier",
+                "less": ["image-magnifier"],
+                "js": ["plugins/image-magnifier"]
+            },
             "infobox_comp":{
                 "name": "Info box",
                 "less": ["info-box"],
@@ -374,6 +401,11 @@
                 "name": "Input",
                 "less": ["input"],
                 "js": ["plugins/input"]
+            },
+            "input_material_comp":{
+                "name": "Material Input",
+                "less": ["input-material"],
+                "js": ["plugins/input-material"]
             },
             "keypad_comp":{
                 "name": "Keypad",
@@ -496,7 +528,17 @@
             "spinner_comp":{
                 "name": "Spinner",
                 "less": ["spinner"],
-                "js": ["plugins/spinner"]
+                "js": ["plugins/spinner"],
+                "dependencies": {
+                    "js": [
+                        "plugins/input"
+                    ]
+                }
+            },
+            "splitter_comp":{
+                "name": "Splitter",
+                "less": ["splitter"],
+                "js": ["plugins/splitter"]
             },
             "stepper_comp":{
                 "name": "Stepper",
@@ -513,13 +555,20 @@
                 "less": ["switch"],
                 "js": ["plugins/switch"]
             },
+            "swipe_comp":{
+                "name": "Touch &amp; Swipe",
+                "js": ["plugins/swipe"]
+            },
             "table_comp":{
                 "name": "Table",
                 "less": ["table"],
                 "js": ["plugins/table"],
                 "dependencies": {
                     "js": [
-                        "utils/i18n"
+                        "utils/i18n", "utils/export", "plugins/checkbox", "plugins/radio", "plugins/spinner", "plugins/input"
+                    ],
+                    "less": [
+                        "buttons"
                     ]
                 }
             },
@@ -527,6 +576,11 @@
                 "name": "Tabs",
                 "less": ["tabs"],
                 "js": ["plugins/tabs"]
+            },
+            "tabs_material_comp":{
+                "name": "Material Tabs",
+                "less": ["tabs-material"],
+                "js": ["plugins/tabs-material"]
             },
             "tag_input_comp":{
                 "name": "Tag input",

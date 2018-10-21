@@ -1,5 +1,5 @@
 /*
- * Metro 4 Components Library v4.2.22 build 699 (https://metroui.org.ua)
+ * Metro 4 Components Library v4.2.26 build 704 (https://metroui.org.ua)
  * Copyright 2018 Sergey Pimenov
  * Licensed under MIT
  */
@@ -33,6 +33,7 @@ var meta_date_format_input = $("meta[name='metro4:date_format_input']").attr("co
 var meta_animation_duration = $("meta[name='metro4:animation_duration']").attr("content");
 var meta_callback_timeout = $("meta[name='metro4:callback_timeout']").attr("content");
 var meta_timeout = $("meta[name='metro4:timeout']").attr("content");
+var meta_scroll_multiple = $("meta[name='metro4:scroll_multiple']").attr("content");
 
 if (window.METRO_INIT === undefined) {
     window.METRO_INIT = meta_init !== undefined ? JSON.parse(meta_init) : true;
@@ -59,6 +60,9 @@ if (window.METRO_CALLBACK_TIMEOUT === undefined) {
 }
 if (window.METRO_TIMEOUT === undefined) {
     window.METRO_TIMEOUT = meta_timeout !== undefined ? parseInt(meta_timeout) : 2000;
+}
+if (window.METRO_SCROLL_MULTIPLE === undefined) {
+    window.METRO_SCROLL_MULTIPLE = meta_scroll_multiple !== undefined ? parseInt(meta_scroll_multiple) : 20;
 }
 if (window.METRO_HOTKEYS_FILTER_CONTENT_EDITABLE === undefined) {window.METRO_HOTKEYS_FILTER_CONTENT_EDITABLE = true;}
 if (window.METRO_HOTKEYS_FILTER_INPUT_ACCEPTING_ELEMENTS === undefined) {window.METRO_HOTKEYS_FILTER_INPUT_ACCEPTING_ELEMENTS = true;}
@@ -88,8 +92,8 @@ var isTouch = (('ontouchstart' in window) || (navigator.MaxTouchPoints > 0) || (
 
 var Metro = {
 
-    version: "4.2.22",
-    versionFull: "4.2.22.699 ",
+    version: "4.2.26",
+    versionFull: "4.2.26.704 ",
     isTouchable: isTouch,
     fullScreenEnabled: document.fullscreenEnabled,
     sheet: null,
@@ -158,7 +162,7 @@ var Metro = {
         stop: 'touchend.metro mouseup.metro',
         move: 'touchmove.metro mousemove.metro',
         enter: 'touchstart.metro mouseenter.metro',
-        leave: 'touchend.metro mouseleave.metro',
+        leave: 'mouseleave.metro',
         focus: 'focus.metro',
         blur: 'blur.metro',
         resize: 'resize.metro',
@@ -410,7 +414,7 @@ var Metro = {
         p = $(element).data(name);
 
         if (!Utils.isValue(p)) {
-            throw new Error("Component can not be destroyed: the element is not a Ьуекщ 4 component.");
+            throw new Error("Component can not be destroyed: the element is not a Metro 4 component.");
         }
 
         if (!Utils.isFunc(p['destroy'])) {
@@ -3373,6 +3377,10 @@ var Utils = {
         return result !== "Invalid Date";
     },
 
+    isDateObject: function(v){
+        return typeof v === 'object' && v['getMonth'] !== undefined;
+    },
+
     isInt: function(n){
         return Number(n) === n && n % 1 === 0;
     },
@@ -3602,6 +3610,22 @@ var d = new Date().getTime();
         }
 
         return el.getBoundingClientRect();
+    },
+
+    getCursorPosition: function(el, e){
+        var a = Utils.rect(el);
+        return {
+            x: Utils.pageXY(e).x - a.left - window.pageXOffset,
+            y: Utils.pageXY(e).y - a.top - window.pageYOffset
+        };
+    },
+
+    getCursorPositionX: function(el, e){
+        return Utils.getCursorPosition(el, e).x;
+    },
+
+    getCursorPositionY: function(el, e){
+        return Utils.getCursorPosition(el, e).y;
     },
 
     objectLength: function(obj){
@@ -3958,7 +3982,9 @@ var d = new Date().getTime();
             var result;
 
             switch (type) {
+                case "int":
                 case "integer": result = parseInt(s); break;
+                case "number":
                 case "float": result = parseFloat(s); break;
                 case "date": result = !Utils.isValue(format) ? new Date(s) : s.toDate(format); break;
                 default: result = s.trim();
@@ -4126,6 +4152,41 @@ var d = new Date().getTime();
         } else if (document.selection) {  // IE?
             document.selection.empty();
         }
+    },
+
+    isLocalhost: function(){
+        return (location.hostname === "localhost" || location.hostname === "127.0.0.1" || location.hostname === "")
+    },
+
+    iframeBubbleMouseMove: function(iframe){
+        if (Utils.isJQueryObject(iframe)) {
+            iframe = iframe[0];
+        }
+        var existingOnMouseMove = iframe.contentWindow.onmousemove;
+        iframe.contentWindow.onmousemove = function(e){
+            if(existingOnMouseMove) existingOnMouseMove(e);
+            var evt = document.createEvent("MouseEvents");
+            var boundingClientRect = iframe.getBoundingClientRect();
+            evt.initMouseEvent(
+                "mousemove",
+                true,
+                false,
+                window,
+                e.detail,
+                e.screenX,
+                e.screenY,
+                e.clientX + boundingClientRect.left,
+                e.clientY + boundingClientRect.top,
+                e.ctrlKey,
+                e.altKey,
+                e.shiftKey,
+                e.metaKey,
+                e.button,
+                null
+            );
+
+            iframe.dispatchEvent(evt);
+        };
     }
 };
 
@@ -4146,6 +4207,7 @@ var Accordion = {
         return this;
     },
     options: {
+        material: false,
         duration: METRO_ANIMATION_DURATION,
         oneFrame: true,
         showActive: true,
@@ -4180,6 +4242,10 @@ var Accordion = {
         var frame_to_open;
 
         element.addClass("accordion");
+
+        if (o.material === true) {
+            element.addClass("material");
+        }
 
         if (active.length === 0) {
             frame_to_open = frames[0];
@@ -5049,6 +5115,157 @@ var Audio = {
 
 Metro.plugin('audio', Audio);
 
+// Source: js/plugins/bottom-sheet.js
+var BottomSheet = {
+    init: function( options, elem ) {
+        this.options = $.extend( {}, this.options, options );
+        this.elem  = elem;
+        this.element = $(elem);
+        this.toggle = null;
+
+        this._setOptionsFromDOM();
+        this._create();
+
+        return this;
+    },
+
+    options: {
+        mode: "list",
+        toggle: null,
+        onOpen: Metro.noop,
+        onClose: Metro.noop,
+        onBottomSheetCreate: Metro.noop
+    },
+
+    _setOptionsFromDOM: function(){
+        var that = this, element = this.element, o = this.options;
+
+        $.each(element.data(), function(key, value){
+            if (key in o) {
+                try {
+                    o[key] = JSON.parse(value);
+                } catch (e) {
+                    o[key] = value;
+                }
+            }
+        });
+    },
+
+    _create: function(){
+        var that = this, element = this.element, o = this.options;
+
+        this._createStructure();
+        this._createEvents();
+
+        Utils.exec(o.onBottomSheetCreate, [element], element[0]);
+    },
+
+    _createStructure: function(){
+        var that = this, element = this.element, o = this.options;
+
+        element
+            .addClass("bottom-sheet")
+            .addClass(o.mode+"-list");
+
+        if (Utils.isValue(o.toggle) && $(o.toggle).length > 0) {
+            this.toggle = $(o.toggle);
+        }
+    },
+
+    _createEvents: function(){
+        var that = this, element = this.element, o = this.options;
+
+        if (Utils.isValue(this.toggle)) {
+            this.toggle.on(Metro.events.click, function(){
+                that.toggleView();
+            });
+        }
+
+        element.on(Metro.events.click, "li", function(){
+            that.close();
+        });
+    },
+
+    isOpen: function(){
+        return this.element.hasClass("opened");
+    },
+
+    open: function(mode){
+        var element = this.element, o = this.options;
+
+        if (Utils.isValue(mode)) {
+            element.removeClass("list-style grid-style").addClass(mode+"-style");
+        }
+
+        this.element.addClass("opened");
+        Utils.exec(o.onOpen, [element], element[0]);
+    },
+
+    close: function(){
+        var element = this.element, o = this.options;
+
+        element.removeClass("opened");
+        Utils.exec(o.onClose, [element], element[0]);
+    },
+
+    toggle: function(mode){
+        if (this.isOpen()) {
+            this.close();
+        } else {
+            this.open(mode);
+        }
+    },
+
+    changeAttribute: function(attributeName){
+
+    },
+
+    destroy: function(){}
+};
+
+Metro.plugin('bottomsheet', BottomSheet);
+
+Metro['bottomsheet'] = {
+    isBottomSheet: function(el){
+        return Utils.isMetroObject(el, "bottomsheet");
+    },
+
+    open: function(el, as){
+        if (!this.isBottomSheet(el)) {
+            return false;
+        }
+        var sheet = $(el).data("bottomsheet");
+        sheet.open(as);
+    },
+
+    close: function(el){
+        if (!this.isBottomSheet(el)) {
+            return false;
+        }
+        var sheet = $(el).data("bottomsheet");
+        sheet.close();
+    },
+
+    toggle: function(el, as){
+        if (!this.isBottomSheet(el)) {
+            return false;
+        }
+        if (this.isOpen(el)) {
+            this.close(el);
+        } else {
+            this.open(el, as);
+        }
+    },
+
+    isOpen: function(el){
+        if (!this.isBottomSheet(el)) {
+            return false;
+        }
+        var sheet = $(el).data("bottomsheet");
+        return sheet.isOpen();
+    }
+};
+
 // Source: js/plugins/button-group.js
 var ButtonGroup = {
     init: function( options, elem ) {
@@ -5189,6 +5406,10 @@ var Calendar = {
     },
 
     options: {
+        prevMonthIcon: "<span class='default-icon-chevron-left'></span>",
+        nextMonthIcon: "<span class='default-icon-chevron-right'></span>",
+        prevYearIcon: "<span class='default-icon-chevron-left'></span>",
+        nextYearIcon: "<span class='default-icon-chevron-right'></span>",
         wide: false,
         widePoint: null,
         pickerMode: false,
@@ -5288,7 +5509,7 @@ var Calendar = {
 
         if (o.show !== null && Utils.isDate(o.show, o.inputFormat)) {
             this.show = Utils.isValue(o.inputFormat) ? o.show.toDate(o.inputFormat) : (new Date(o.show));
-
+            this.show.setHours(0,0,0,0);
             this.current = {
                 year: this.show.getFullYear(),
                 month: this.show.getMonth(),
@@ -5322,13 +5543,27 @@ var Calendar = {
 
     _dates2array: function(val, category){
         var that = this, o = this.options;
+        var dates;
 
-        $.each(Utils.strToArray(val), function(){
-            var _d = Utils.isValue(o.inputFormat) ? this.toDate(o.inputFormat) : new Date(this);
-            if (Utils.isDate(_d) === false) {
-                return ;
+        if (Utils.isNull(val)) {
+            return ;
+        }
+
+        dates = typeof val === 'string' ? Utils.strToArray(val) : val;
+
+        $.each(dates, function(){
+            var _d;
+
+            if (!Utils.isDateObject(this)) {
+                _d = Utils.isValue(o.inputFormat) ? this.toDate(o.inputFormat) : new Date(this);
+                if (Utils.isDate(_d) === false) {
+                    return ;
+                }
+                _d.setHours(0,0,0,0);
+            } else {
+                _d = this;
             }
-            _d.setHours(0,0,0,0);
+
             that[category].push(_d.getTime());
         });
     },
@@ -5387,7 +5622,7 @@ var Calendar = {
                 if (el.hasClass("prev-year") || el.hasClass("next-year")) {
                     Utils.exec(o.onYearChange, [that.current, element], element[0]);
                 }
-            }, o.ripple ? 300 : 0);
+            }, o.ripple ? 300 : 1);
 
             e.preventDefault();
             e.stopPropagation();
@@ -5643,6 +5878,7 @@ var Calendar = {
         if (content.length === 0) {
             content = $("<div>").addClass("calendar-content").addClass(o.clsCalendarContent).appendTo(element);
         }
+
         content.html("");
 
         toolbar = $("<div>").addClass("calendar-toolbar").appendTo(content);
@@ -5650,13 +5886,13 @@ var Calendar = {
         /**
          * Calendar toolbar
          */
-        $("<span>").addClass("prev-month").appendTo(toolbar);
+        $("<span>").addClass("prev-month").html(o.prevMonthIcon).appendTo(toolbar);
         $("<span>").addClass("curr-month").html(calendar_locale['months'][this.current.month]).appendTo(toolbar);
-        $("<span>").addClass("next-month").appendTo(toolbar);
+        $("<span>").addClass("next-month").html(o.nextMonthIcon).appendTo(toolbar);
 
-        $("<span>").addClass("prev-year").appendTo(toolbar);
+        $("<span>").addClass("prev-year").html(o.prevYearIcon).appendTo(toolbar);
         $("<span>").addClass("curr-year").html(this.current.year).appendTo(toolbar);
-        $("<span>").addClass("next-year").appendTo(toolbar);
+        $("<span>").addClass("next-year").html(o.nextYearIcon).appendTo(toolbar);
 
         /**
          * Week days
@@ -5699,25 +5935,6 @@ var Calendar = {
 
             if (o.outside === true) {
                 d.html(v);
-
-                if (this.special.length === 0) {
-                    if (this.selected.indexOf(s.getTime()) !== -1) {
-                        d.addClass("selected").addClass(o.clsSelected);
-                    }
-                    if (this.exclude.indexOf(s.getTime()) !== -1) {
-                        d.addClass("disabled excluded").addClass(o.clsExcluded);
-                    }
-                    if (this.min !== null && s < this.min) {
-                        d.addClass("disabled excluded").addClass(o.clsExcluded);
-                    }
-                    if (this.max !== null && s > this.max) {
-                        d.addClass("disabled excluded").addClass(o.clsExcluded);
-                    }
-                } else {
-                    if (this.special.indexOf(s.getTime()) === -1) {
-                        d.addClass("disabled excluded").addClass(o.clsExcluded);
-                    }
-                }
             }
 
             counter++;
@@ -5725,19 +5942,18 @@ var Calendar = {
 
         first.setHours(0,0,0,0);
         while(first.getMonth() === this.current.month) {
+
             d = $("<div>").addClass("day").html(first.getDate()).appendTo(days_row);
 
             d.data('day', first.getTime());
 
-            if (this.show.format("%d-%m-%Y") === first.format("%d-%m-%Y")) {
+            // console.log(this.show.getTime() === first.getTime());
+            if (this.show.getTime() === first.getTime()) {
                 d.addClass("showed");
             }
 
-            if (
-                this.today.getFullYear() === first.getFullYear() &&
-                this.today.getMonth() === first.getMonth() &&
-                this.today.getDate() === first.getDate()
-            ) {
+            // console.log(this.today.getTime() === first.getTime());
+            if (this.today.getTime() === first.getTime()) {
                 d.addClass("today").addClass(o.clsToday);
             }
 
@@ -5790,37 +6006,20 @@ var Calendar = {
             d.data('day', s.getTime());
             if (o.outside === true) {
                 d.html(i + 1);
-
-                if (this.special.length === 0) {
-
-                    if (this.selected.indexOf(s.getTime()) !== -1) {
-                        d.addClass("selected").addClass(o.clsSelected);
-                    }
-                    if (this.exclude.indexOf(s.getTime()) !== -1) {
-                        d.addClass("disabled excluded").addClass(o.clsExcluded);
-                    }
-                    if (this.min !== null && s.getTime() < this.min.getTime()) {
-                        d.addClass("disabled excluded").addClass(o.clsExcluded);
-                    }
-                    if (this.max !== null && s.getTime() > this.max.getTime()) {
-                        d.addClass("disabled excluded").addClass(o.clsExcluded);
-                    }
-                } else {
-                    if (this.special.indexOf(s.getTime()) === -1) {
-                        d.addClass("disabled excluded").addClass(o.clsExcluded);
-                    }
-                }
             }
         }
     },
 
     _drawCalendar: function(){
-        this.element.html("");
-        this._drawHeader();
-        this._drawContent();
-        this._drawFooter();
-        this._drawMonths();
-        this._drawYears();
+        var that = this;
+        setTimeout(function(){
+            that.element.html("");
+            that._drawHeader();
+            that._drawContent();
+            that._drawFooter();
+            that._drawMonths();
+            that._drawYears();
+        }, 1);
     },
 
     getPreset: function(){
@@ -5850,6 +6049,7 @@ var Calendar = {
 
     toDay: function(){
         this.today = new Date();
+        this.today.setHours(0,0,0,0);
         this.current = {
             year: this.today.getFullYear(),
             month: this.today.getMonth(),
@@ -5861,93 +6061,50 @@ var Calendar = {
 
     setExclude: function(exclude){
         var that = this, element = this.element, o = this.options;
-
-        o.exclude = exclude !== undefined ? exclude : element.attr("data-exclude");
-
-        if (o.exclude !== null) {
-            if (Array.isArray(o.exclude) === false) {
-                o.exclude = o.exclude.split(",").map(function(item){
-                    return item.trim();
-                });
-            }
-
-            $.each(o.exclude, function(){
-                if (Utils.isDate(this) === false) {
-                    return ;
-                }
-                that.exclude.push((new Date(this)).getTime());
-            });
+        if (Utils.isNull(exclude) && Utils.isNull(element.attr("data-exclude"))) {
+            return ;
         }
-
+        o.exclude = !Utils.isNull(exclude) ? exclude : element.attr("data-exclude");
+        this._dates2array(o.exclude, 'exclude');
         this._drawContent();
     },
 
     setPreset: function(preset){
         var that = this, element = this.element, o = this.options;
-
-        o.preset = preset !== undefined ? preset : element.attr("data-preset");
-
-        if (o.preset !== null) {
-
-            that.selected = [];
-
-            if (Array.isArray(o.preset) === false) {
-                o.preset = o.preset.split(",").map(function(item){
-                    return item.trim();
-                });
-            }
-
-            $.each(o.preset, function(){
-                if (Utils.isDate(this) === false) {
-                    return ;
-                }
-                that.selected.push((new Date(this)).getTime());
-            });
+        if (Utils.isNull(preset) && Utils.isNull(element.attr("data-preset"))) {
+            return ;
         }
 
+        o.preset = !Utils.isNull(preset) ? preset : element.attr("data-preset");
+        this._dates2array(o.preset, 'selected');
         this._drawContent();
     },
 
     setSpecial: function(special){
         var that = this, element = this.element, o = this.options;
-
-        o.special = special !== undefined ? special : element.attr("data-special");
-
-        if (o.special !== null) {
-
-            that.special = [];
-
-            if (Array.isArray(o.special) === false) {
-                o.special = o.special.split(",").map(function(item){
-                    return item.trim();
-                });
-            }
-
-            $.each(o.special, function(){
-                if (Utils.isDate(this) === false) {
-                    return ;
-                }
-                that.special.push((new Date(this)).getTime());
-            });
+        if (Utils.isNull(special) && Utils.isNull(element.attr("data-special"))) {
+            return ;
         }
-
+        o.special = !Utils.isNull(special) ? special : element.attr("data-special");
+        this._dates2array(o.exclude, 'special');
         this._drawContent();
     },
 
     setShow: function(show){
         var that = this, element = this.element, o = this.options;
 
-        o.show = show !== null ? show : element.attr("data-show");
-
-        if (o.show !== null && Utils.isDate(o.show)) {
-            this.show = new Date(o.show);
-            this.show.setHours(0,0,0,0);
-            this.current = {
-                year: this.show.getFullYear(),
-                month: this.show.getMonth(),
-                day: this.show.getDate()
-            }
+        if (Utils.isNull(show) && Utils.isNull(element.attr("data-show"))) {
+            return ;
         }
+        o.show = !Utils.isNull(show) ? show : element.attr("data-show");
+
+        this.show = Utils.isDateObject(show) ? show : Utils.isValue(o.inputFormat) ? o.show.toDate(o.inputFormat) : new Date(o.show);
+        this.show.setHours(0,0,0,0);
+        this.current = {
+            year: this.show.getFullYear(),
+            month: this.show.getMonth(),
+            day: this.show.getDate()
+        };
 
         this._drawContent();
     },
@@ -5969,10 +6126,12 @@ var Calendar = {
     },
 
     setToday: function(val){
-        if (Utils.isDate(val) === false) {
-            return ;
+        var that = this, element = this.element, o = this.options;
+
+        if (!Utils.isValue(val)) {
+            val = new Date();
         }
-        this.today = new Date(val);
+        this.today = Utils.isDateObject(val) ? val : Utils.isValue(o.inputFormat) ? val.toDate(o.inputFormat) : new Date(val);
         this.today.setHours(0,0,0,0);
         this._drawHeader();
         this._drawContent();
@@ -6064,6 +6223,10 @@ var CalendarPicker = {
 
     options: {
 
+        nullValue: true,
+
+        prepend: "",
+
         calendarWide: false,
         calendarWidePoint: null,
 
@@ -6150,16 +6313,14 @@ var CalendarPicker = {
         }
 
         if (!Utils.isValue(curr)) {
-            this.value = (new Date()).format("%Y/%m/%d");
+            //this.value = new Date();
         } else {
-            this.value = Utils.isValue(o.inputFormat) === false ? curr : (curr.toDate(o.inputFormat)).format("%Y/%m/%d");
+            this.value = Utils.isValue(o.inputFormat) === false ? new Date(curr) : curr.toDate(o.inputFormat);
         }
 
-        if (Utils.isDate(this.value)) {
-            this.value_date = new Date(this.value);
-            this.value_date.setHours(0,0,0,0);
-            element.val(this.value_date.format(o.format));
-        }
+        if (Utils.isValue(this.value)) this.value.setHours(0,0,0,0);
+
+        element.val(!Utils.isValue(curr) && o.nullValue === true ? "" : this.value.format(o.format));
 
         if (prev.length === 0) {
             parent.prepend(container);
@@ -6185,7 +6346,7 @@ var CalendarPicker = {
             buttons: false,
             headerFormat: o.headerFormat,
 
-            clsCalendar: o.clsCalendar + " calendar-picker",
+            clsCalendar: o.clsCalendar,
             clsCalendarHeader: o.clsCalendarHeader,
             clsCalendarContent: o.clsCalendarContent,
             clsCalendarFooter: "d-none",
@@ -6207,23 +6368,21 @@ var CalendarPicker = {
             showFooter: false,
             onDayClick: function(sel, day, el){
                 var date = new Date(sel[0]);
+                date.setHours(0,0,0,0);
 
                 that._removeOverlay();
 
-                that.value = date.format(Metro.utils.isValue(o.inputFormat) ? o.inputFormat : "%Y/%m/%d");
-                that.value_date = date;
+                that.value = date;
                 element.val(date.format(o.format, o.locale));
                 element.trigger("change");
                 cal.removeClass("open open-up");
                 cal.hide();
-                Utils.exec(o.onChange, [that.value, that.value_date, element], element[0]);
+                Utils.exec(o.onChange, [that.value], element[0]);
                 Utils.exec(o.onDayClick, [sel, day, el], element[0]);
             },
             onMonthChange: o.onMonthChange,
             onYearChange: o.onYearChange
         });
-
-        cal.hide();
 
         this.calendar = cal;
 
@@ -6235,6 +6394,10 @@ var CalendarPicker = {
         calendarButton = $("<button>").addClass("button").attr("tabindex", -1).attr("type", "button").html(o.calendarButtonIcon);
         calendarButton.appendTo(buttons);
 
+        if (o.prepend !== "") {
+            var prepend = $("<div>").html(o.prepend);
+            prepend.addClass("prepend").addClass(o.clsPrepend).appendTo(container);
+        }
 
         if (element.attr('dir') === 'rtl' ) {
             container.addClass("rtl");
@@ -6273,6 +6436,13 @@ var CalendarPicker = {
                 container.addClass("dialog-mode");
             }
         }
+
+        if (element.is(":disabled")) {
+            this.disable();
+        } else {
+            this.enable();
+        }
+
     },
 
     _createEvents: function(){
@@ -6280,6 +6450,7 @@ var CalendarPicker = {
         var container = element.parent();
         var clear = container.find(".input-clear-button");
         var cal = this.calendar;
+        var cal_plugin = cal.data('calendar');
 
         $(window).on(Metro.events.resize, function(){
             if (o.dialogMode !== true) {
@@ -6293,45 +6464,40 @@ var CalendarPicker = {
 
         if (clear.length > 0) clear.on(Metro.events.click, function(e){
             element.val("").trigger('change').blur();
-            that.value = (new Date()).format("%Y/%m/%d");
-            that.value_date = new Date(this.value);
-            that.value_date.setHours(0,0,0,0);
+            that.value = null;
             e.preventDefault();
             e.stopPropagation();
         });
 
         container.on(Metro.events.click, "button, input", function(e){
-            if (Utils.isDate(that.value, o.inputFormat) && (cal.hasClass("open") === false && cal.hasClass("open-up") === false)) {
-                cal.css({
-                    visibility: "hidden",
-                    display: "block"
-                });
-                cal.data('calendar').setPreset(that.value);
-                cal.data('calendar').setShow(that.value);
-                cal.data('calendar').setToday(that.value);
-                cal.css({
-                    visibility: "visible",
-                    display: "none"
-                });
-            }
+
+            var value = Utils.isValue(that.value) ? that.value : new Date();
+
+            value.setHours(0,0,0,0);
+
             if (cal.hasClass("open") === false && cal.hasClass("open-up") === false) {
+
+                $(".calendar-picker .calendar").removeClass("open open-up").hide();
+
+                cal_plugin.setPreset([value]);
+                cal_plugin.setShow(value);
+                cal_plugin.setToday(value);
+
                 if (container.hasClass("dialog-mode")) {
                     that.overlay.appendTo($('body'));
                 }
-                $(".calendar-picker .calendar").removeClass("open open-up").hide();
                 cal.addClass("open");
                 if (Utils.isOutsider(cal) === false) {
                     cal.addClass("open-up");
                 }
-                cal.show();
-                Utils.exec(o.onCalendarShow, [element, cal]);
+                Utils.exec(o.onCalendarShow, [element, cal], cal);
+
             } else {
 
                 that._removeOverlay();
-
                 cal.removeClass("open open-up");
-                cal.hide();
-                Utils.exec(o.onCalendarHide, [element, cal]);
+                Utils.exec(o.onCalendarHide, [element, cal], cal);
+
             }
             e.preventDefault();
             e.stopPropagation();
@@ -6340,7 +6506,7 @@ var CalendarPicker = {
         element.on(Metro.events.blur, function(){container.removeClass("focused");});
         element.on(Metro.events.focus, function(){container.addClass("focused");});
         element.on(Metro.events.change, function(){
-            Utils.exec(o.onChange, [that.value_date, that.value, element], element[0]);
+            Utils.exec(o.onChange, [that.value], element[0]);
         });
     },
 
@@ -6368,21 +6534,15 @@ var CalendarPicker = {
     val: function(v){
         var element = this.element, o = this.options;
 
-        if (v === undefined) {
-            return this.value_date;
+        if (Utils.isNull(v)) {
+            return this.value;
         }
 
-        if (Utils.isDate(v) === true) {
-            this.value_date = new Date(v);
-            this.value = this.value_date.format(o.format);
-            element.val(this.value_date.format(o.format));
+        if (Utils.isDate(v, o.inputFormat) === true) {
+            this.value = typeof v === 'string' ? v.toDate(o.inputFormat) : v;
+            element.val(this.value.format(o.format));
             element.trigger("change");
         }
-    },
-
-    changeValue: function(){
-        var element = this.element;
-        this.val(element.attr("value"));
     },
 
     disable: function(){
@@ -6430,44 +6590,42 @@ var CalendarPicker = {
         }
     },
 
-    changeAttrLocale: function(){
-        var element = this.element;
-        this.i18n(element.attr("data-locale"));
-    },
-
-    changeAttrSpecial: function(){
-        var element = this.element;
-        var cal = this.calendar.data("calendar");
-        cal.setSpecial(element.attr("data-special"));
-    },
-
-    changeAttrExclude: function(){
-        var element = this.element;
-        var cal = this.calendar.data("calendar");
-        cal.setExclude(element.attr("data-exclude"));
-    },
-
-    changeAttrMinDate: function(){
-        var element = this.element;
-        var cal = this.calendar.data("calendar");
-        cal.setMinDate(element.attr("data-min-date"));
-    },
-
-    changeAttrMaxDate: function(){
-        var element = this.element;
-        var cal = this.calendar.data("calendar");
-        cal.setMaxDate(element.attr("data-max-date"));
-    },
-
     changeAttribute: function(attributeName){
+        var that = this, element = this.element, o = this.options;
+        var cal = this.calendar.data("calendar");
+
+        var changeAttrLocale = function(){
+            that.i18n(element.attr("data-locale"));
+        };
+
+        var changeAttrSpecial = function(){
+            cal.setSpecial(element.attr("data-special"));
+        };
+
+        var changeAttrExclude = function(){
+            cal.setExclude(element.attr("data-exclude"));
+        };
+
+        var changeAttrMinDate = function(){
+            cal.setMinDate(element.attr("data-min-date"));
+        };
+
+        var changeAttrMaxDate = function(){
+            cal.setMaxDate(element.attr("data-max-date"));
+        };
+
+        var changeAttrValue = function(){
+            that.val(element.attr("value"));
+        };
+
         switch (attributeName) {
-            case "value": this.changeValue(); break;
+            case "value": changeAttrValue(); break;
             case 'disabled': this.toggleState(); break;
-            case 'data-locale': this.changeAttrLocale(); break;
-            case 'data-special': this.changeAttrSpecial(); break;
-            case 'data-exclude': this.changeAttrExclude(); break;
-            case 'data-min-date': this.changeAttrMinDate(); break;
-            case 'data-max-date': this.changeAttrMaxDate(); break;
+            case 'data-locale': changeAttrLocale(); break;
+            case 'data-special': changeAttrSpecial(); break;
+            case 'data-exclude': changeAttrExclude(); break;
+            case 'data-min-date': changeAttrMinDate(); break;
+            case 'data-max-date': changeAttrMaxDate(); break;
         }
     }
 };
@@ -6479,7 +6637,7 @@ $(document).on(Metro.events.click, ".overlay.for-calendar-picker",function(){
 });
 
 $(document).on(Metro.events.click, function(){
-    $(".calendar-picker .calendar").removeClass("open open-up").hide();
+    $(".calendar-picker .calendar").removeClass("open open-up");
 });
 
 
@@ -7584,12 +7742,10 @@ Metro.plugin('collapse', Collapse);
 // Source: js/plugins/countdown.js
 var Countdown = {
     init: function( options, elem ) {
-        var that = this;
         this.options = $.extend( {}, this.options, options );
         this.elem  = elem;
         this.element = $(elem);
-        this.timepoint = (new Date()).getTime();
-        this.breakpoint = null;
+        this.breakpoint = (new Date()).getTime();
         this.blinkInterval = null;
         this.tickInterval = null;
 
@@ -7598,7 +7754,13 @@ var Countdown = {
         this.zeroMinutesFired = false;
         this.zeroSecondsFired = false;
 
+        this.current = {
+            d: 0, h: 0, m: 0, s: 0
+        };
+
         this.locale = null;
+
+        this.inactiveTab = false;
 
         this._setOptionsFromDOM();
         this._create();
@@ -7607,6 +7769,10 @@ var Countdown = {
     },
 
     options: {
+        stopOnBlur: true,
+        animate: "none",
+        animationFunc: "swing",
+        inputFormat: null,
         locale: METRO_LOCALE,
         days: 0,
         hours: 0,
@@ -7615,16 +7781,18 @@ var Countdown = {
         date: null,
         start: true,
         clsCountdown: "",
+        clsPart: "",
         clsZero: "",
         clsAlarm: "",
         clsDays: "",
         clsHours: "",
         clsMinutes: "",
         clsSeconds: "",
-        onCountdownCreate: Metro.noop,
         onAlarm: Metro.noop,
         onTick: Metro.noop,
-        onZero: Metro.noop
+        onZero: Metro.noop,
+        onBlink: Metro.noop,
+        onCountdownCreate: Metro.noop
     },
 
     _setOptionsFromDOM: function(){
@@ -7645,21 +7813,18 @@ var Countdown = {
         var o = this.options;
         this.locale = Metro.locales[o.locale] !== undefined ? Metro.locales[o.locale] : Metro.locales["en-US"];
         this._build();
+        this._createEvents();
     },
 
-    _build: function(){
-        var that = this, element = this.element, o = this.options;
-        var parts = ["days", "hours", "minutes", "seconds"];
-        var dm = 24*60*60*1000, hm = 60*60*1000, mm = 60*1000, sm = 1000;
-        var delta_days, delta_hours, delta_minutes;
+    _setBreakpoint: function(){
+        var o = this.options;
+        var dm = 86400000, hm = 3600000, mm = 60000, sm = 1000;
 
-        element.addClass("countdown").addClass(o.clsCountdown);
+        this.breakpoint = (new Date()).getTime();
 
-        if (o.date !== null && Utils.isDate(o.date) !== false) {
-            this.timepoint = (new Date(o.date)).getTime();
+        if (Utils.isValue(o.date) && Utils.isDate(o.date, o.inputFormat)) {
+            this.breakpoint = Utils.isValue(o.inputFormat) ? (o.date.toDate(o.inputFormat)).getTime() : (new Date(o.date)).getTime();
         }
-
-        this.breakpoint = this.timepoint;
 
         if (parseInt(o.days) > 0) {
             this.breakpoint += parseInt(o.days) * dm;
@@ -7673,28 +7838,28 @@ var Countdown = {
         if (parseInt(o.seconds) > 0) {
             this.breakpoint += parseInt(o.seconds) * sm;
         }
+    },
 
-        delta_days = Math.round((that.breakpoint - that.timepoint) / dm);
-        delta_hours = Math.round((that.breakpoint - that.timepoint) / hm);
-        delta_minutes = Math.round((that.breakpoint - that.timepoint) / mm);
+    _build: function(){
+        var that = this, element = this.element, o = this.options;
+        var parts = ["days", "hours", "minutes", "seconds"];
+        var dm = 24*60*60*1000;
+        var delta_days;
+        var now = (new Date()).getTime();
+        var digit;
+
+        if (!Utils.isValue(element.attr("id"))) {
+            element.attr("id", Utils.elementId("countdown"));
+        }
+
+        element.addClass("countdown").addClass(o.clsCountdown);
+
+        this._setBreakpoint();
+
+        delta_days = Math.round((that.breakpoint - now) / dm);
 
         $.each(parts, function(){
-            if (this === "days" && delta_days === 0) {
-                return ;
-            }
-
-            if (this === "hours" && delta_days === 0 && delta_hours === 0) {
-                return ;
-            }
-
-            if (this === "minutes" && delta_days === 0 && delta_hours === 0 && delta_minutes === 0) {
-                return ;
-            }
-
-            if (this === "seconds") {
-            }
-
-            var part = $("<div>").addClass("part " + this).attr("data-label", that.locale["calendar"]["time"][this]).appendTo(element);
+            var part = $("<div>").addClass("part " + this).addClass(o.clsPart).attr("data-label", that.locale["calendar"]["time"][this]).appendTo(element);
 
             if (this === "days") {part.addClass(o.clsDays);}
             if (this === "hours") {part.addClass(o.clsHours);}
@@ -7706,133 +7871,251 @@ var Countdown = {
 
             if (this === "days" && delta_days >= 100) {
 
-                for(var i = 0; i < String(delta_days/100).length; i++) {
+                for(var i = 0; i < String(Math.round(delta_days/100)).length; i++) {
                     $("<div>").addClass("digit").appendTo(part);
                 }
-
             }
+
         });
 
-        element.find(".digit").html("0");
+        digit = element.find(".digit");
+        digit.append($("<span class='digit-placeholder'>").html("0"));
+        digit.append($("<span class='digit-value'>").html("0"));
 
-        Utils.exec(this.options.onCountdownCreate, [this.element]);
 
-        if (this.options.start === true) {
+        Utils.exec(o.onCountdownCreate, [element], element[0]);
+
+        if (o.start === true) {
             this.start();
+        } else {
+            this.tick();
         }
     },
 
+    _createEvents: function(){
+        var that = this, element = this.element, o = this.options;
+        // if (o.stopOnBlur === true) {
+            $(window).on(Metro.events.blur+"-"+element.attr("id"), function(){
+                // that.pause();
+                that.inactiveTab = true;
+            });
+            $(window).on(Metro.events.focus+"-"+element.attr("id"), function(){
+                // that.resume();
+                that.inactiveTab = false;
+            });
+        // }
+    },
+
     blink: function(){
-        this.element.toggleClass("blink");
+        var element = this.element, o = this.options;
+        element.toggleClass("blink");
+        Utils.exec(o.onBlink, [this.current], element[0]);
     },
 
     tick: function(){
-        var that = this, element = this.element, o = this.options;
+        var element = this.element, o = this.options;
         var dm = 24*60*60, hm = 60*60, mm = 60, sm = 1;
         var left, now = (new Date()).getTime();
         var d, h, m, s;
+        var days = element.find(".days"),
+            hours = element.find(".hours"),
+            minutes = element.find(".minutes"),
+            seconds = element.find(".seconds");
 
         left = Math.floor((this.breakpoint - now)/1000);
 
-        if (left <= 0) {
+        if (left <= -1) {
             this.stop();
-            if (o.clsZero !== "") {
-                element.find(".part").removeClass(o.clsZero);
-            }
             element.addClass(o.clsAlarm);
-            Utils.exec(o.onAlarm, [now, element]);
+            Utils.exec(o.onAlarm, [now], element[0]);
             return ;
         }
 
         d = Math.floor(left / dm);
         left -= d * dm;
-        this.draw("days", d);
+        if (this.current.d !== d) {
+            this.current.d = d;
+            this.draw("days", d);
+        }
 
         if (d === 0) {
-            if (o.clsDays !== "") {
-                element.find(".days").removeClass(o.clsDays);
-            }
             if (this.zeroDaysFired === false) {
                 this.zeroDaysFired = true;
-                element.find(".days").addClass(o.clsZero);
-                Utils.exec(o.onZero, ["days", element]);
+                days.addClass(o.clsZero);
+                Utils.exec(o.onZero, ["days", days], element[0]);
             }
         }
 
         h = Math.floor(left / hm);
         left -= h*hm;
-        this.draw("hours", h);
+        if (this.current.h !== h) {
+            this.current.h = h;
+            this.draw("hours", h);
+        }
 
         if (d === 0 && h === 0) {
-            if (o.clsHours !== "") {
-                element.find(".hours").removeClass(o.clsHours);
-            }
             if (this.zeroHoursFired === false) {
                 this.zeroHoursFired = true;
-                element.find(".hours").addClass(o.clsZero);
-                Utils.exec(o.onZero, ["hours", element]);
+                hours.addClass(o.clsZero);
+                Utils.exec(o.onZero, ["hours", hours], element[0]);
             }
         }
 
         m = Math.floor(left / mm);
         left -= m*mm;
-        this.draw("minutes", m);
+        if (this.current.m !== m) {
+            this.current.m = m;
+            this.draw("minutes", m);
+        }
 
         if (d === 0 && h === 0 && m === 0) {
-            if (o.clsMinutes !== "") {
-                element.find(".minutes").removeClass(o.clsMinutes);
-            }
             if (this.zeroMinutesFired === false) {
                 this.zeroMinutesFired = true;
-                element.find(".minutes").addClass(o.clsZero);
-                Utils.exec(o.onZero, ["minutes", element]);
+                minutes.addClass(o.clsZero);
+                Utils.exec(o.onZero, ["minutes", minutes], element[0]);
             }
         }
 
         s = Math.floor(left / sm);
-        this.draw("seconds", s);
+        if (this.current.s !== s) {
+            this.current.s = s;
+            this.draw("seconds", s);
+        }
 
         if (d === 0 && h === 0 && m === 0 && s === 0) {
-            if (o.clsSeconds !== "") {
-                element.find(".seconds").removeClass(o.clsSeconds);
-            }
             if (this.zeroSecondsFired === false) {
                 this.zeroSecondsFired = true;
-                element.find(".seconds").addClass(o.clsZero);
-                Utils.exec(o.onZero, ["seconds", element]);
+                seconds.addClass(o.clsZero);
+                Utils.exec(o.onZero, ["seconds", seconds], element[0]);
             }
         }
 
-        Utils.exec(o.onTick, [{days:d, hours:h, minutes:m, seconds:s}, element]);
+        Utils.exec(o.onTick, [{days:d, hours:h, minutes:m, seconds:s}], element[0]);
     },
 
     draw: function(part, value){
         var that = this, element = this.element, o = this.options;
-        var digit_value;
-        var len = String(value).length;
+        var digits, digits_length, digit_value, digit_current, digit, digit_copy;
+        var len, i, duration = 900, height;
 
-        var digits = element.find("."+part+" .digit").html("0");
-        var digits_length = digits.length;
+        var removeOldDigit = function(_digit){
+            if (!document.hidden) {
+                setTimeout(function(){
+                    _digit.remove();
+                }, 500);
+            } else {
+                _digit.remove();
+            }
+        };
 
-        for(var i = 0; i < len; i++){
+        var slideDigit = function(digit){
+            var digit_copy, height = digit.height();
+            digit_copy = digit.clone().appendTo(digit.parent());
+            digit_copy.css({
+                top: -1 * height,
+                opacity: .5
+            });
+
+            digit.addClass("-old-digit").animate({
+                top: height,
+                opacity: 0
+            }, duration, o.animationFunc, removeOldDigit(digit));
+
+            digit_copy.html(digit_value).animate({
+                top: 0,
+                opacity: 1
+            }, duration, o.animationFunc);
+        };
+
+        var fadeDigit = function(digit){
+            var digit_copy;
+            digit_copy = digit.clone().appendTo(digit.parent());
+            digit_copy.css({
+                opacity: 0
+            });
+
+            digit.addClass("-old-digit").animate({
+                opacity: 0
+            }, duration, o.animationFunc, removeOldDigit(digit));
+
+            digit_copy.html(digit_value).animate({
+                opacity: 1
+            }, duration, o.animationFunc);
+        };
+
+        var zoomDigit = function(digit){
+            var digit_copy,
+                height = digit.height(),
+                width = digit.width(),
+                fs = parseInt(Utils.getStyleOne(digit, "font-size"));
+            digit_copy = digit.clone().appendTo(digit.parent());
+            digit_copy.css({
+                opacity: 0,
+                fontSize: 0,
+                top: height/2,
+                left: width/2
+            });
+
+            digit.addClass("-old-digit").animate({
+                opacity: 0,
+                fontSize: 0,
+                top: height,
+                left: width/2
+            }, duration, o.animationFunc, removeOldDigit(digit));
+
+            digit_copy.html(digit_value).animate({
+                opacity: 1,
+                fontSize: fs,
+                top: 0,
+                left: 0
+            }, duration, o.animationFunc);
+        };
+
+        value = String(value);
+
+        if (value.length === 1) {
+            value = '0'+value;
+        }
+
+        len = value.length;
+
+        digits = element.find("."+part+" .digit");
+        digits_length = digits.length;
+
+        for(i = 0; i < len; i++){
+            digit = element.find("." + part + " .digit:eq("+ (digits_length - 1) +") .digit-value");
             digit_value = Math.floor( value / Math.pow(10, i) ) % 10;
-            element.find("." + part + " .digit:eq("+ (digits_length - 1) +")").html(digit_value);
+            digit_current = parseInt(digit.text());
+
+            if (digit_current === digit_value) {
+                continue;
+            }
+
+            switch (String(o.animate).toLowerCase()) {
+                case "slide": slideDigit(digit); break;
+                case "fade": fadeDigit(digit); break;
+                case "zoom": zoomDigit(digit); break;
+                default: digit.html(digit_value);
+            }
+
             digits_length--;
         }
     },
 
     start: function(){
-        var that = this;
+        var that = this, element = this.element;
 
-        if (this.element.data("paused") === false) {
+        if (element.data("paused") === false) {
             return;
         }
+
 
         clearInterval(this.blinkInterval);
         clearInterval(this.tickInterval);
 
-        this.element.data("paused", false);
+        element.data("paused", false);
 
+        this._setBreakpoint();
         this.tick();
 
         this.blinkInterval = setInterval(function(){that.blink();}, 500);
@@ -7840,17 +8123,47 @@ var Countdown = {
     },
 
     stop: function(){
-        var that = this, element = this.element, o = this.options;
-        element.data("paused", true);
-        element.find(".digit").html("0");
+        var element = this.element;
         clearInterval(this.blinkInterval);
         clearInterval(this.tickInterval);
+        element.data("paused", true);
+        element.find(".digit").html("0");
+        this.current = {
+            d: 0, h:0, m: 0, s:0
+        };
     },
 
     pause: function(){
-        this.element.data("paused", true);
         clearInterval(this.blinkInterval);
         clearInterval(this.tickInterval);
+        this.element.data("paused", true);
+    },
+
+    resume: function(){
+        var that = this;
+
+        this.element.data("paused", false);
+        this.blinkInterval = setInterval(function(){that.blink();}, 500);
+        this.tickInterval = setInterval(function(){that.tick();}, 1000);
+    },
+
+    reset: function(){
+        var that = this, element = this.element, o = this.options;
+
+        clearInterval(this.blinkInterval);
+        clearInterval(this.tickInterval);
+
+        element.find(".part").removeClass(o.clsZero);
+        element.find(".digit").html("0");
+
+        this._setBreakpoint();
+
+        element.data("paused", false);
+
+        this.tick();
+
+        this.blinkInterval = setInterval(function(){that.blink();}, 500);
+        this.tickInterval = setInterval(function(){that.tick();}, 1000);
     },
 
     togglePlay: function(){
@@ -7863,10 +8176,6 @@ var Countdown = {
 
     isPaused: function(){
         return this.element.data("paused");
-    },
-
-    getTimepoint: function(asDate){
-        return asDate === true ? new Date(this.timepoint) : this.timepoint;
     },
 
     getBreakpoint: function(asDate){
@@ -8929,6 +9238,7 @@ var Dialog = {
     },
 
     options: {
+        leaveOverlayOnClose: false,
         toTop: false,
         toBottom: false,
         locale: METRO_LOCALE,
@@ -9162,7 +9472,10 @@ var Dialog = {
     close: function(){
         var that = this, element = this.element, o = this.options;
 
-        $('body').find('.overlay').remove();
+        if (!Utils.bool(o.leaveOverlayOnClose)) {
+            console.log("ku");
+            $('body').find('.overlay').remove();
+        }
 
         this.hide(function(){
             element.data("open", false);
@@ -9176,7 +9489,7 @@ var Dialog = {
     open: function(){
         var that = this, element = this.element, o = this.options;
 
-        if (o.overlay === true) {
+        if (o.overlay === true && $(".overlay").length === 0) {
             this.overlay.appendTo($("body"));
             if (o.overlayClickClose === true) {
                 this.overlay.on(Metro.events.click, function(){
@@ -9631,11 +9944,17 @@ var Dropdown = {
     _create: function(){
         var that = this, element = this.element, o = this.options;
         var toggle, parent = element.parent();
+        var element_roles = Utils.isValue(element.attr("data-role")) ? Utils.strToArray(element.attr("data-role")) : [];
 
         toggle = o.toggleElement !== null ? $(o.toggleElement) : element.siblings('.dropdown-toggle').length > 0 ? element.siblings('.dropdown-toggle') : element.prev();
 
         this.displayOrigin = element.css("display");
-        this.element.css("display", "none");
+        element.css("display", "none");
+
+        if (element_roles.length === 0 || element_roles.indexOf("dropdown") === -1) {
+            element_roles.push("dropdown");
+            element.attr("data-role", element_roles.join(", "));
+        }
 
         toggle.on(Metro.events.click, function(e){
             parent.siblings(parent[0].tagName).removeClass("active-container");
@@ -9663,8 +9982,7 @@ var Dropdown = {
                         'visibility': 'visible',
                         'display': 'none'
                     });
-                    var menu_width = children_width;
-                    element.css('width', menu_width);
+                    element.css('width', children_width);
                 }
                 that._open(element);
                 parent.addClass("active-container");
@@ -10202,6 +10520,528 @@ var Hint = {
 
 Metro.plugin('hint', Hint);
 
+// Source: js/plugins/html-container.js
+// TODO source as array, mode as array
+
+var HtmlContainer = {
+    init: function( options, elem ) {
+        this.options = $.extend( {}, this.options, options );
+        this.elem  = elem;
+        this.element = $(elem);
+
+        this._setOptionsFromDOM();
+        this._create();
+
+        return this;
+    },
+
+    options: {
+        htmlSource: null,
+        insertMode: "replace", // replace, append, prepend
+        onLoad: Metro.noop,
+        onFail: Metro.noop,
+        onDone: Metro.noop,
+        onHtmlContainerCreate: Metro.noop
+    },
+
+    _setOptionsFromDOM: function(){
+        var that = this, element = this.element, o = this.options;
+
+        $.each(element.data(), function(key, value){
+            if (key in o) {
+                try {
+                    o[key] = JSON.parse(value);
+                } catch (e) {
+                    o[key] = value;
+                }
+            }
+        });
+    },
+
+    _create: function(){
+        var that = this, element = this.element, o = this.options;
+
+        if (Utils.isValue(o.htmlSource)) {
+            this._load();
+        }
+
+        Utils.exec(o.onHtmlContainerCreate, [element], element[0]);
+    },
+
+    _load: function(){
+        var that = this, element = this.element, elem = this.elem, o = this.options;
+        var xhttp, html;
+
+        html = o.htmlSource;
+
+        xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function() {
+            if (this.readyState === 4) {
+                if (this.status === 404) {
+                    elem.innerHTML = "Page not found.";
+                    Utils.exec(o.onFail, [this], elem);
+                }
+                if (this.status === 200) {
+                    switch (o.insertMode.toLowerCase()) {
+                        case "prepend": element.prepend(this.responseText); break;
+                        case "append": element.append(this.responseText); break;
+                        default: {
+                            element.html(this.responseText);
+                        }
+                    }
+                    Utils.exec(o.onLoad, [this.responseText], elem);
+                }
+
+                Utils.exec(o.onDone, [this], elem);
+            }
+        };
+        xhttp.open("GET", html, true);
+        xhttp.send();
+    },
+
+    changeAttribute: function(attributeName){
+        var that = this, element = this.element, elem = this.elem, o = this.options;
+
+        var changeHTMLSource = function(){
+            var html = element.attr("data-html-source");
+            if (Utils.isNull(html)) {
+                return ;
+            }
+            if (html.trim() === "") {
+                element.html("");
+            }
+            o.htmlSource = html;
+            this._load();
+        };
+
+        var changeInsertMode = function(){
+            var attr = element.attr("data-insert-mode");
+            if (Utils.isValue(attr)) {
+                o.insertMode = attr;
+            }
+        };
+
+        switch (attributeName) {
+            case "data-html-source": changeHTMLSource(); break;
+            case "data-insert-mode": changeInsertMode(); break;
+        }
+    },
+
+    destroy: function(){}
+};
+
+Metro.plugin('htmlcontainer', HtmlContainer);
+
+// Source: js/plugins/image-comparer.js
+var ImageCompare = {
+    init: function( options, elem ) {
+        this.options = $.extend( {}, this.options, options );
+        this.elem  = elem;
+        this.element = $(elem);
+
+        this._setOptionsFromDOM();
+        this._create();
+
+        return this;
+    },
+
+    options: {
+        width: "100%",
+        height: "auto",
+        onResize: Metro.noop,
+        onSliderMove: Metro.noop,
+        onImageCompareCreate: Metro.noop
+    },
+
+    _setOptionsFromDOM: function(){
+        var that = this, element = this.element, o = this.options;
+
+        $.each(element.data(), function(key, value){
+            if (key in o) {
+                try {
+                    o[key] = JSON.parse(value);
+                } catch (e) {
+                    o[key] = value;
+                }
+            }
+        });
+    },
+
+    _create: function(){
+        var that = this, element = this.element, o = this.options;
+
+        this._createStructure();
+        this._createEvents();
+
+        Utils.exec(o.onImageCompareCreate, [element], element[0]);
+    },
+
+    _createStructure: function(){
+        var that = this, element = this.element, o = this.options;
+        var container, container_overlay, slider;
+        var images, element_width, element_height;
+
+        if (!Utils.isValue(element.attr("id"))) {
+            element.attr("id", Utils.elementId("image-compare"));
+        }
+
+        element.addClass("image-compare").css({
+            width: o.width
+        });
+
+        element_width = element.width();
+
+        switch (o.height) {
+            case "16/9": element_height = Utils.aspectRatioH(element_width, o.height); break;
+            case "21/9": element_height = Utils.aspectRatioH(element_width, o.height); break;
+            case "4/3": element_height = Utils.aspectRatioH(element_width, o.height); break;
+            case "auto": element_height = Utils.aspectRatioH(element_width, "16/9"); break;
+            default: element_height = o.height;
+        }
+
+        element.css({
+            height: element_height
+        });
+
+        container = $("<div>").addClass("image-container").appendTo(element);
+        container_overlay = $("<div>").addClass("image-container-overlay").appendTo(element).css({
+            width: element_width / 2
+        });
+
+        slider = $("<div>").addClass("image-slider").appendTo(element);
+        slider.css({
+            top: element_height / 2 - slider.height() / 2,
+            left: element_width / 2 - slider.width() / 2
+        });
+
+        images = element.find("img");
+
+        $.each(images, function(i, v){
+            var img = $("<div>").addClass("image-wrapper");
+            img.css({
+                width: element_width,
+                height: element_height,
+                backgroundImage: "url("+this.src+")"
+            });
+            img.appendTo(i === 0 ? container : container_overlay);
+        });
+    },
+
+    _createEvents: function(){
+        var that = this, element = this.element, o = this.options;
+
+        var overlay = element.find(".image-container-overlay");
+        var slider = element.find(".image-slider");
+
+        slider.on(Metro.events.start, function(e){
+            var w = element.width();
+            $(document).on(Metro.events.move + "-" + element.attr("id"), function(e){
+                var x = Utils.getCursorPositionX(element, e), left_pos;
+                if (x < 0) x = 0;
+                if (x > w) x = w;
+                overlay.css({
+                    width: x
+                });
+                left_pos = x - slider.width() / 2;
+                slider.css({
+                    left: left_pos
+                });
+                Utils.exec(o.onSliderMove, [x, left_pos, slider[0]], element[0]);
+            });
+            $(document).on(Metro.events.stop + "-" + element.attr("id"), function(){
+                $(document).off(Metro.events.move + "-" + element.attr("id"));
+                $(document).off(Metro.events.stop + "-" + element.attr("id"));
+            })
+        });
+
+        $(window).on(Metro.events.resize+"-"+element.attr("id"), function(){
+            var element_width = element.width(), element_height;
+
+            if (o.width !== "100%") {
+                return ;
+            }
+
+            switch (o.height) {
+                case "16/9": element_height = Utils.aspectRatioH(element_width, o.height); break;
+                case "21/9": element_height = Utils.aspectRatioH(element_width, o.height); break;
+                case "4/3": element_height = Utils.aspectRatioH(element_width, o.height); break;
+                case "auto": element_height = Utils.aspectRatioH(element_width, "16/9"); break;
+                default: element_height = o.height;
+            }
+
+            element.css({
+                height: element_height
+            });
+
+            $.each(element.find(".image-wrapper"), function(){
+                $(this).css({
+                    width: element_width,
+                    height: element_height
+                })
+            });
+
+            element.find(".image-container-overlay").css({
+                width: element_width / 2
+            });
+
+            slider.css({
+                top: element_height / 2 - slider.height() / 2,
+                left: element_width / 2 - slider.width() / 2
+            });
+
+            Utils.exec(o.onResize, [element_width, element_height], element[0]);
+        });
+    },
+
+    changeAttribute: function(attributeName){
+
+    },
+
+    destroy: function(){
+        var element = this.element;
+
+        element.off(Metro.events.start);
+        $(window).off(Metro.events.resize+"-"+element.attr("id"));
+    }
+};
+
+Metro.plugin('imagecompare', ImageCompare);
+
+// Source: js/plugins/image-magnifier.js
+var ImageMagnifier = {
+    init: function( options, elem ) {
+        this.options = $.extend( {}, this.options, options );
+        this.elem  = elem;
+        this.element = $(elem);
+        this.zoomElement = null;
+
+        this._setOptionsFromDOM();
+        this._create();
+
+        return this;
+    },
+
+    options: {
+        width: "100%",
+        height: "auto",
+        lensSize: 100,
+        lensType: "square", // square, circle
+        magnifierZoom: 2,
+        magnifierMode: "glass", // glass, zoom
+        magnifierZoomElement: null,
+
+        clsMagnifier: "",
+        clsLens: "",
+        clsZoom: "",
+
+        onMagnifierMove: Metro.noop,
+        onImageMagnifierCreate: Metro.noop
+    },
+
+    _setOptionsFromDOM: function(){
+        var element = this.element, o = this.options;
+
+        $.each(element.data(), function(key, value){
+            if (key in o) {
+                try {
+                    o[key] = JSON.parse(value);
+                } catch (e) {
+                    o[key] = value;
+                }
+            }
+        });
+    },
+
+    _create: function(){
+        var element = this.element, o = this.options;
+
+        this._createStructure();
+        this._createEvents();
+
+        Utils.exec(o.onCreate, [element]);
+    },
+
+    _createStructure: function(){
+        var element = this.element, o = this.options;
+        var magnifier, element_width, element_height;
+        var image = element.find("img");
+
+        if (image.length === 0) {
+            throw new Error("Image not defined");
+        }
+
+        if (!Utils.isValue(element.attr("id"))) {
+            element.attr("id", Utils.elementId("image-magnifier"));
+        }
+
+        element.addClass("image-magnifier").css({
+            width: o.width
+        }).addClass(o.clsMagnifier);
+
+        element_width = element.width();
+
+        switch (o.height) {
+            case "16/9": element_height = Utils.aspectRatioH(element_width, o.height); break;
+            case "21/9": element_height = Utils.aspectRatioH(element_width, o.height); break;
+            case "4/3": element_height = Utils.aspectRatioH(element_width, o.height); break;
+            case "auto": element_height = Utils.aspectRatioH(element_width, "16/9"); break;
+            default: element_height = o.height;
+        }
+
+        element.css({
+            height: element_height
+        });
+
+        var x = element_width / 2 - o.lensSize / 2;
+        var y = element_height / 2 - o.lensSize / 2;
+
+        if (o.magnifierMode === "glass") {
+
+            magnifier = $("<div>").addClass("image-magnifier-glass").appendTo(element);
+            magnifier.css({
+                width: o.lensSize,
+                height: o.lensSize,
+                borderRadius: o.lensType !== "circle" ? 0 : "50%",
+                top: y,
+                left: x,
+                backgroundImage: "url(" + image[0].src + ")",
+                backgroundRepeat: "no-repeat",
+                backgroundPosition: "-" + ((x * o.magnifierZoom) - o.lensSize / 4 + 4) + "px -" + ((y * o.magnifierZoom) - o.lensSize / 4 + 4) + "px",
+                backgroundSize: (image[0].width * o.magnifierZoom) + "px " + (image[0].height * o.magnifierZoom) + "px"
+            }).addClass(o.clsLens);
+
+        } else {
+
+            magnifier = $("<div>").addClass("image-magnifier-glass").appendTo(element);
+            magnifier.css({
+                width: o.lensSize,
+                height: o.lensSize,
+                borderRadius: 0,
+                borderWidth: 1,
+                top: y,
+                left: x
+            }).addClass(o.clsLens);
+
+            if (!Utils.isValue(o.magnifierZoomElement) || $(o.magnifierZoomElement).length === 0) {
+                this.zoomElement = $("<div>").insertAfter(element);
+            } else {
+                this.zoomElement = $(o.magnifierZoomElement);
+            }
+
+            var zoom_element_width = magnifier[0].offsetWidth * o.magnifierZoom;
+            var zoom_element_height = magnifier[0].offsetHeight * o.magnifierZoom;
+            var cx = zoom_element_width / o.lensSize;
+            var cy = zoom_element_height / o.lensSize;
+
+            this.zoomElement.css({
+                width: zoom_element_width,
+                height: zoom_element_height,
+                backgroundImage: "url(" + image[0].src + ")",
+                backgroundRepeat: "no-repeat",
+                backgroundPosition: "-" + (x * cx) + "px -" + (y * cy) + "px",
+                backgroundSize: (image[0].width * cx) + "px " + (image[0].height * cy) + "px"
+            }).addClass(o.clsZoom);
+        }
+    },
+
+    _createEvents: function(){
+        var element = this.element, o = this.options;
+        var glass = element.find(".image-magnifier-glass");
+        var glass_size = glass[0].offsetWidth / 2;
+        var image = element.find("img")[0];
+        var zoomElement = this.zoomElement;
+        var cx, cy;
+
+        if (o.magnifierMode !== "glass") {
+            cx = zoomElement[0].offsetWidth / glass_size / 2;
+            cy = zoomElement[0].offsetHeight / glass_size / 2;
+
+            zoomElement.css({
+                backgroundSize: (image.width * cx) + "px " + (image.height * cy) + "px"
+            });
+        }
+
+        var lens_move = function(pos){
+            var x, y;
+            var magic = 4, zoom = parseInt(o.magnifierZoom);
+
+            if (o.magnifierMode === "glass") {
+
+                x = pos.x;
+                y = pos.y;
+
+                if (x > image.width - (glass_size / zoom)) {
+                    x = image.width - (glass_size / zoom);
+                }
+                if (x < glass_size / zoom) {
+                    x = glass_size / zoom;
+                }
+                if (y > image.height - (glass_size / zoom)) {
+                    y = image.height - (glass_size / zoom);
+                }
+                if (y < glass_size / zoom) {
+                    y = glass_size / zoom;
+                }
+
+                glass.css({
+                    top: y - glass_size,
+                    left: x - glass_size,
+                    backgroundPosition: "-" + ((x * zoom) - glass_size + magic) + "px -" + ((y * zoom) - glass_size + magic) + "px"
+                });
+            } else {
+
+                x = pos.x - (glass_size);
+                y = pos.y - (glass_size);
+
+                if (x > image.width - glass_size * 2) {x = image.width - glass_size * 2;}
+                if (x < 0) {x = 0;}
+                if (y > image.height - glass_size * 2) {y = image.height - glass_size * 2;}
+                if (y < 0) {y = 0;}
+
+                glass.css({
+                    top: y,
+                    left: x
+                });
+
+                zoomElement.css({
+                    backgroundPosition: "-" + (x * cx) + "px -" + (y * cy) + "px"
+                });
+            }
+        };
+
+        element.on(Metro.events.move, function(e){
+            var pos = Utils.getCursorPosition(image, e);
+
+            lens_move(pos);
+
+            Utils.exec(o.onMagnifierMove, [pos, glass, zoomElement], element[0]);
+
+            e.preventDefault();
+        });
+
+        element.on(Metro.events.leave, function(){
+            var x = element.width() / 2 - o.lensSize / 2;
+            var y = element.height() / 2 - o.lensSize / 2;
+
+            glass.animate({
+                top: y, left: x
+            });
+
+            lens_move({
+                x: x + o.lensSize / 2, y: y + o.lensSize / 2
+            });
+        });
+    },
+
+    changeAttribute: function(attributeName){
+
+    },
+
+    destroy: function(){}
+};
+
+Metro.plugin('imagemagnifier', ImageMagnifier);
+
 // Source: js/plugins/info-box.js
 var InfoBox = {
     init: function( options, elem ) {
@@ -10502,8 +11342,8 @@ Metro['infobox'] = {
     }
 };
 
-// Source: js/plugins/input.js
-var Input = {
+// Source: js/plugins/input-material.js
+var MaterialInput = {
     init: function( options, elem ) {
         this.options = $.extend( {}, this.options, options );
         this.elem  = elem;
@@ -10518,7 +11358,157 @@ var Input = {
 
         return this;
     },
+
     options: {
+
+        label: "",
+        informer: "",
+        icon: "",
+
+        permanentLabel: false,
+
+        clsComponent: "",
+        clsInput: "",
+        clsLabel: "",
+        clsInformer: "",
+        clsIcon: "",
+        clsLine: "",
+
+        onInputCreate: Metro.noop
+    },
+
+    _setOptionsFromDOM: function(){
+        var element = this.element, o = this.options;
+
+        $.each(element.data(), function(key, value){
+            if (key in o) {
+                try {
+                    o[key] = JSON.parse(value);
+                } catch (e) {
+                    o[key] = value;
+                }
+            }
+        });
+    },
+
+    _create: function(){
+        this._createStructure();
+        this._createEvents();
+    },
+
+    _createStructure: function(){
+        var that = this, element = this.element, o = this.options;
+        var prev = element.prev();
+        var parent = element.parent();
+        var container = $("<div>").addClass("input-material " + element[0].className);
+
+        element[0].className = "";
+
+        if (element.attr("type") === undefined) {
+            element.attr("type", "text");
+        }
+
+        if (prev.length === 0) {
+            parent.prepend(container);
+        } else {
+            container.insertAfter(prev);
+        }
+
+        element.appendTo(container);
+
+        if (Utils.isValue(o.label)) {
+            $("<span>").html(o.label).addClass("label").addClass(o.clsLabel).insertAfter(element);
+        }
+        if (Utils.isValue(o.informer)) {
+            $("<span>").html(o.informer).addClass("informer").addClass(o.clsInformer).insertAfter(element);
+        }
+        if (Utils.isValue(o.icon)) {
+            container.addClass("with-icon");
+            $("<span>").html(o.icon).addClass("icon").addClass(o.clsIcon).insertAfter(element);
+        }
+
+        container.append($("<hr>").addClass(o.clsLine));
+
+        if (o.permanentLabel === true) {
+            container.addClass("permanent-label");
+        }
+
+        container.addClass(o.clsComponent);
+        element.addClass(o.clsInput);
+
+        if (element.is(":disabled")) {
+            this.disable();
+        } else {
+            this.enable();
+        }
+    },
+
+    _createEvents: function(){
+        var that = this, element = this.element, o = this.options;
+        var container = element.closest(".input");
+
+    },
+
+    clear: function(){
+        this.element.val('');
+    },
+
+    disable: function(){
+        this.element.data("disabled", true);
+        this.element.parent().addClass("disabled");
+    },
+
+    enable: function(){
+        this.element.data("disabled", false);
+        this.element.parent().removeClass("disabled");
+    },
+
+    toggleState: function(){
+        if (this.element.data("disabled") === false) {
+            this.disable();
+        } else {
+            this.enable();
+        }
+    },
+
+    changeAttribute: function(attributeName){
+        switch (attributeName) {
+            case 'disabled': this.toggleState(); break;
+        }
+    },
+
+    destroy: function(){
+        var element = this.element;
+        var parent = element.parent();
+
+        element.insertBefore(parent);
+        parent.remove();
+    }
+};
+
+Metro.plugin('materialinput', MaterialInput);
+
+// Source: js/plugins/input.js
+var Input = {
+    init: function( options, elem ) {
+        this.options = $.extend( {}, this.options, options );
+        this.elem  = elem;
+        this.element = $(elem);
+        this.history = [];
+        this.historyIndex = -1;
+        this.autocomplete = [];
+
+        this._setOptionsFromDOM();
+        this._create();
+
+        Utils.exec(this.options.onInputCreate, [this.element], this.elem);
+
+        return this;
+    },
+    options: {
+        autocomplete: null,
+        autocompleteListHeight: 200,
+
         history: false,
         historyPreset: "",
         historyDivider: "|",
@@ -10551,6 +11541,7 @@ var Input = {
         onHistoryDown: Metro.noop,
         onClearClick: Metro.noop,
         onRevealClick: Metro.noop,
+        onSearchButtonClick: Metro.noop,
         onInputCreate: Metro.noop
     },
 
@@ -10671,6 +11662,21 @@ var Input = {
             });
         }
 
+        if (!Utils.isNull(o.autocomplete)) {
+
+            var autocomplete_obj = Utils.isObject(o.autocomplete);
+
+            if (autocomplete_obj !== false) {
+                that.autocomplete = autocomplete_obj;
+            } else {
+                this.autocomplete = Utils.strToArray(o.autocomplete);
+            }
+            $("<div>").addClass("autocomplete-list").css({
+                maxHeight: o.autocompleteListHeight,
+                display: "none"
+            }).appendTo(container);
+        }
+
         if (element.is(":disabled")) {
             this.disable();
         } else {
@@ -10681,10 +11687,16 @@ var Input = {
     _createEvents: function(){
         var that = this, element = this.element, o = this.options;
         var container = element.closest(".input");
+        var autocompleteList = container.find(".autocomplete-list");
 
         container.on(Metro.events.click, ".input-clear-button", function(){
             var curr = element.val();
             element.val(Utils.isValue(o.defaultValue) ? o.defaultValue : "").trigger('change').trigger('keyup').focus();
+            if (autocompleteList.length > 0) {
+                autocompleteList.css({
+                    display: "none"
+                })
+            }
             Utils.exec(o.onClearClick, [curr, element.val()], element[0]);
         });
 
@@ -10749,8 +11761,52 @@ var Input = {
             }
         });
 
-        element.on(Metro.events.blur, function(){container.removeClass("focused");});
-        element.on(Metro.events.focus, function(){container.addClass("focused");});
+        element.on(Metro.events.blur, function(){
+            container.removeClass("focused");
+        });
+
+        element.on(Metro.events.focus, function(){
+            container.addClass("focused");
+        });
+
+        element.on(Metro.events.input, function(){
+            var val = this.value.toLowerCase();
+            var items;
+
+            if (autocompleteList.length === 0) {
+                return;
+            }
+
+            autocompleteList.html("");
+
+            items = that.autocomplete.filter(function(item){
+                return item.toLowerCase().indexOf(val) > -1;
+            });
+
+            autocompleteList.css({
+                display: items.length > 0 ? "block" : "none"
+            });
+
+            $.each(items, function(){
+                var index = this.toLowerCase().indexOf(val);
+                var item = $("<div>").addClass("item").attr("data-autocomplete-value", this);
+                var html;
+
+                if (index === 0) {
+                    html = "<strong>"+this.substr(0, val.length)+"</strong>"+this.substr(val.length);
+                } else {
+                    html = this.substr(0, index) + "<strong>"+this.substr(index, val.length)+"</strong>"+this.substr(index + val.length);
+                }
+                item.html(html).appendTo(autocompleteList);
+            })
+        });
+
+        container.on(Metro.events.click, ".autocomplete-list .item", function(){
+            element.val($(this).attr("data-autocomplete-value"));
+            autocompleteList.css({
+                display: "none"
+            });
+        });
     },
 
     getHistory: function(){
@@ -10840,6 +11896,11 @@ var Input = {
 };
 
 Metro.plugin('input', Input);
+
+$(document).on(Metro.events.click, function(e){
+    $('.input .autocomplete-list').hide();
+});
+
 
 // Source: js/plugins/keypad.js
 var Keypad = {
@@ -12154,7 +13215,7 @@ var Listview = {
             node.prepend(this._createIcon(data.icon));
         }
 
-        if (Utils.objectLength(o.structure > 0)) $.each(o.structure, function(key, val){
+        if (Utils.objectLength(o.structure) > 0) $.each(o.structure, function(key, val){
             if (data[key] !== undefined) {
                 $("<div>").addClass("node-data item-data-"+key).addClass(data[val]).html(data[key]).appendTo(node);
             }
@@ -12346,7 +13407,7 @@ var Listview = {
     insertBefore: function(node, data){
         var element = this.element, o = this.options;
         var new_node = this._createNode(data);
-        new_node.insertBefore(node);
+        new_node.addClass("node").insertBefore(node);
         Utils.exec(o.onNodeInsert, [new_node, element]);
         return new_node;
     },
@@ -12354,7 +13415,7 @@ var Listview = {
     insertAfter: function(node, data){
         var element = this.element, o = this.options;
         var new_node = this._createNode(data);
-        new_node.insertAfter(node);
+        new_node.addClass("node").insertAfter(node);
         Utils.exec(o.onNodeInsert, [new_node, element]);
         return new_node;
     },
@@ -12926,7 +13987,12 @@ var Notify = {
         timeout: METRO_TIMEOUT,
         duration: METRO_ANIMATION_DURATION,
         distance: "100vh",
-        animation: "swing"
+        animation: "swing",
+        onClick: Metro.noop,
+        onClose: Metro.noop,
+        onShow: Metro.noop,
+        onAppend: Metro.noop,
+        onNotifyCreate: Metro.noop
     },
 
     notifies: [],
@@ -12959,7 +14025,7 @@ var Notify = {
         var notify, that = this, o = this.options;
         var m, t;
 
-        if (message === undefined || message.trim() === '') {
+        if (!Utils.isValue(message)) {
             return false;
         }
 
@@ -12991,12 +14057,14 @@ var Notify = {
         }
 
         notify.on(Metro.events.click, function(){
-            that.kill($(this));
+            Utils.exec(Utils.isValue(options.onClick) ? options.onClick : o.onClick, null, this);
+            that.kill($(this), Utils.isValue(options.onClose) ? options.onClose : o.onClose);
         });
 
         // Show
         notify.hide(function(){
             notify.appendTo(o.container);
+            Utils.exec(Utils.isValue(options.onAppend) ? options.onAppend : o.onAppend, null, notify[0]);
 
             notify.css({
                 marginTop: o.distance
@@ -13004,22 +14072,28 @@ var Notify = {
                 notify.animate({
                     marginTop: ".25rem"
                 }, o.duration, o.animation, function(){
+
+                    Utils.exec(o.onNotifyCreate, null, this);
+
                     if (options !== undefined && options.keepOpen === true) {
                     } else {
                         setTimeout(function(){
-                            that.kill(notify, (options !== undefined && options.onClose !== undefined ? options.onClose : undefined));
+                            that.kill(notify, Utils.isValue(options.onClose) ? options.onClose : o.onClose);
                         }, o.timeout);
                     }
-                    if (options !== undefined && options.onShow !== undefined) Utils.callback(options.onShow);
+
+                    Utils.exec(Utils.isValue(options.onShow) ? options.onShow : o.onShow, null, notify[0]);
+
                 });
             });
         });
     },
 
     kill: function(notify, callback){
+        notify.off(Metro.events.click);
         notify.fadeOut('slow', function(){
+            Utils.exec(Utils.isValue(callback) ? callback : this.options.onClose, null, notify[0]);
             notify.remove();
-            Utils.callback(callback);
         });
     },
 
@@ -13304,9 +14378,15 @@ var Popover = {
 
     createPopover: function(){
         var that = this, elem = this.elem, element = this.element, o = this.options;
-        var popover = $("<div>").addClass("popover neb").addClass(o.clsPopover).html(o.popoverText);
+        var popover;
         var neb_pos;
         var id = Utils.elementId("popover");
+
+        if (this.popovered) {
+            return ;
+        }
+
+        popover = $("<div>").addClass("popover neb").addClass(o.clsPopover).html(o.popoverText);
 
         popover.attr("id", id);
 
@@ -13980,8 +15060,8 @@ var Resizable = {
     _createStructure: function(){
         var element = this.element, o = this.options;
 
-        if (Utils.isValue(o.resizeElement) && $(o.resizeElement).length > 0) {
-            this.resizer = $(o.resizeElement);
+        if (Utils.isValue(o.resizeElement) && element.find(o.resizeElement).length > 0) {
+            this.resizer = element.find(o.resizeElement);
         } else {
             this.resizer = $("<span>").addClass("resize-element").appendTo(element);
         }
@@ -14307,6 +15387,7 @@ var Select = {
         clsPrepend: "",
         clsAppend: "",
         clsOption: "",
+        clsOptionActive: "",
         clsOptionGroup: "",
         clsDropList: "",
         clsSelectedItem: "",
@@ -14548,8 +15629,8 @@ var Select = {
                 selected_item.data("option", leaf);
                 $("<span>").addClass("remover").addClass(o.clsSelectedItemRemover).html("&times;").appendTo(selected_item);
             } else {
-                list.find("li.active").removeClass("active");
-                leaf.addClass("active");
+                list.find("li.active").removeClass("active").removeClass(o.clsOptionActive);
+                leaf.addClass("active").addClass(o.clsOptionActive);
                 input.html(html);
                 drop_container.data("dropdown").close();
             }
@@ -14577,6 +15658,9 @@ var Select = {
                 }
             });
             item.remove();
+
+            element.trigger("change");
+
             Utils.exec(o.onItemDeselect, [option], element[0]);
             Utils.exec(o.onChange, [that.getSelected()], element[0]);
             e.preventDefault();
@@ -14666,7 +15750,7 @@ var Select = {
             $.each(options, function(){
                 if (this.selected) result.push(this.value);
             });
-            return result;
+            return multiple ? result : result[0];
         }
 
         $.each(options, function(){this.selected = false;});
@@ -15941,6 +17025,158 @@ var Spinner = {
 
 Metro.plugin('spinner', Spinner);
 
+// Source: js/plugins/splitter.js
+var Splitter = {
+    init: function( options, elem ) {
+        this.options = $.extend( {}, this.options, options );
+        this.elem  = elem;
+        this.element = $(elem);
+
+        this._setOptionsFromDOM();
+        this._create();
+
+        return this;
+    },
+
+    options: {
+        splitMode: "horizontal", // horizontal or vertical
+        splitSizes: null,
+        gutterSize: 4,
+        minSizes: null,
+        children: "*",
+        gutterClick: "expand", // expand or collapse
+        onResizeStart: Metro.noop,
+        onResizeStop: Metro.noop,
+        onResizeSplit: Metro.noop,
+        onSplitterCreate: Metro.noop
+    },
+
+    _setOptionsFromDOM: function(){
+        var that = this, element = this.element, o = this.options;
+
+        $.each(element.data(), function(key, value){
+            if (key in o) {
+                try {
+                    o[key] = JSON.parse(value);
+                } catch (e) {
+                    o[key] = value;
+                }
+            }
+        });
+    },
+
+    _create: function(){
+        var that = this, element = this.element, o = this.options;
+
+        this._createStructure();
+        this._createEvents();
+
+        Utils.exec(o.onCreate, [element]);
+    },
+
+    _createStructure: function(){
+        var that = this, element = this.element, o = this.options;
+        var children = element.children(o.children).addClass("split-block");
+        var i, children_sizes = [];
+        var gutters, resizeProp = o.splitMode === "horizontal" ? "width" : "height";
+
+        if (!Utils.isValue(element.attr("id"))) {
+            element.attr("id", Utils.elementId("splitter"));
+        }
+
+        element.addClass("splitter");
+        if (o.splitMode.toLowerCase() === "vertical") {
+            element.addClass("vertical");
+        }
+
+        for (i = 0; i < children.length - 1; i++) {
+            $("<div>").addClass("gutter").css(resizeProp, o.gutterSize).insertAfter($(children[i]));
+        }
+
+        gutters = element.children(".gutter");
+
+        if (!Utils.isValue(o.splitSizes)) {
+            children.css({
+                flexBasis: "calc("+(100/children.length)+"% - "+(gutters.length * o.gutterSize)+"px)"
+            })
+        } else {
+            children_sizes = Utils.strToArray(o.splitSizes);
+            for(i = 0; i < children_sizes.length; i++) {
+                $(children[i]).css({
+                    flexBasis: "calc("+children_sizes[i]+"% - "+(gutters.length * o.gutterSize)+"px)"
+                });
+            }
+        }
+
+        if (Utils.isValue(o.minSizes)) {
+            if (String(o.minSizes).contains(",")) {
+                children_sizes = Utils.strToArray(o.minSizes);
+                for (i = 0; i < children_sizes.length; i++) {
+                    $(children[i]).data("min-size", children_sizes[i]);
+                }
+            } else {
+                $.each(children, function(){
+                    this.style.setProperty('min-'+resizeProp, String(o.minSizes).contains("%") ? o.minSizes : String(o.minSizes).replace("px", "")+"px", 'important');
+                });
+            }
+        }
+    },
+
+    _createEvents: function(){
+        var that = this, element = this.element, o = this.options;
+        var gutters = element.children(".gutter");
+
+        gutters.on(Metro.events.start, function(e){
+            var w = o.splitMode === "horizontal" ? element.width() : element.height();
+            var gutter = $(this);
+            var prev_block = gutter.prev(".split-block");
+            var next_block = gutter.next(".split-block");
+            var prev_block_size = 100 * (o.splitMode === "horizontal" ? prev_block.outerWidth(true) : prev_block.outerHeight(true)) / w;
+            var next_block_size = 100 * (o.splitMode === "horizontal" ? next_block.outerWidth(true) : next_block.outerHeight(true)) / w;
+            var start_pos = Utils.getCursorPosition(element, e);
+
+            gutter.addClass("active");
+
+            Utils.exec(o.onResizeStart, [start_pos, gutter, prev_block, next_block], element);
+
+            $(window).on(Metro.events.move + "-" + element.attr("id"), function(e){
+                var pos = Utils.getCursorPosition(element, e);
+                var new_pos;
+
+                if (o.splitMode === "horizontal") {
+                    new_pos = (pos.x * 100 / w) - (start_pos.x * 100 / w);
+
+                } else {
+                    new_pos = (pos.y * 100 / w) - (start_pos.y * 100 / w);
+                }
+
+                prev_block.css("flex-basis", "calc(" + (prev_block_size + new_pos) + "% - "+(gutters.length * o.gutterSize)+"px)");
+                next_block.css("flex-basis", "calc(" + (next_block_size - new_pos) + "% - "+(gutters.length * o.gutterSize)+"px)");
+
+                Utils.exec(o.onResizeSplit, [pos, gutter, prev_block, next_block], element);
+            });
+
+            $(window).on(Metro.events.stop + "-" + element.attr("id"), function(e){
+
+                gutter.removeClass("active");
+
+                $(window).off(Metro.events.move + "-" + element.attr("id"));
+                $(window).off(Metro.events.stop + "-" + element.attr("id"));
+
+                Utils.exec(o.onResizeStop, [Utils.getCursorPosition(element, e), gutter, prev_block, next_block], element);
+            })
+        });
+    },
+
+    changeAttribute: function(attributeName){
+
+    },
+
+    destroy: function(){}
+};
+
+Metro.plugin('splitter', Splitter);
+
 // Source: js/plugins/stepper.js
 var Stepper = {
     init: function( options, elem ) {
@@ -16710,6 +17946,7 @@ var Switch = {
         return this;
     },
     options: {
+        material: false,
         caption: "",
         captionPosition: "right",
         clsSwitch: "",
@@ -16736,7 +17973,7 @@ var Switch = {
         var that = this, element = this.element, o = this.options;
         var prev = element.prev();
         var parent = element.parent();
-        var container = $("<label>").addClass("switch " + element[0].className);
+        var container = $("<label>").addClass((o.material === true ? " switch-material " : " switch ") + element[0].className);
         var check = $("<span>").addClass("check");
         var caption = $("<span>").addClass("caption").html(o.caption);
 
@@ -16804,7 +18041,7 @@ var Table = {
         this.element = $(elem);
         this.currentPage = 1;
         this.pagesCount = 1;
-        this.filterString = "";
+        this.searchString = "";
         this.data = null;
         this.activity = null;
         this.busy = false;
@@ -16814,13 +18051,14 @@ var Table = {
         this.wrapperRows = null;
         this.wrapperPagination = null;
         this.filterIndex = null;
-        this.filtersIndexes = null;
+        this.filtersIndexes = [];
         this.component = null;
         this.inspector = null;
         this.view = {};
         this.viewDefault = {};
         this.locale = Metro.locales["en-US"];
         this.input_interval = null;
+        this.searchFields = [];
 
         this.sort = {
             dir: "asc",
@@ -16843,20 +18081,35 @@ var Table = {
     options: {
         locale: METRO_LOCALE,
 
+        crud: false,
+        crudTitle: "CRUD",
+        editButton: true,
+        delButton: true,
+        addButton: true,
+        editButtonIcon: "<span class='default-icon-pencil'></span>",
+        delButtonIcon: "<span class='default-icon-minus'></span>",
+        addButtonIcon: "<span class='default-icon-plus'></span>",
+        clsEditButton: "",
+        clsDelButton: "",
+        clsAddButton: "",
+
         check: false,
-        checkColIndex: 0,
-        checkName: null,
         checkType: "checkbox",
         checkStyle: 1,
+        checkColIndex: 0,
+        checkName: null,
         checkStoreKey: "TABLE:$1:KEYS",
         rownum: false,
+        rownumTitle: "#",
 
-        filter: null,
         filters: null,
+        filtersOperator: "and",
+
         source: null,
 
-        filterMinLength: 1,
-        filterThreshold: 500,
+        searchMinLength: 1,
+        searchThreshold: 500,
+        searchFields: null,
 
         showRowsSteps: true,
         showSearch: true,
@@ -16864,12 +18117,12 @@ var Table = {
         showPagination: true,
         paginationShortMode: true,
         showActivity: true,
-
         muteTable: true,
 
         rows: 10,
         rowsSteps: "10,25,50,100",
 
+        staticView: false,
         viewSaveMode: "client",
         viewSavePath: "TABLE:$1:OPTIONS",
 
@@ -16922,6 +18175,10 @@ var Table = {
 
         clsPagination: "",
 
+        clsEvenRow: "",
+        clsOddRow: "",
+        clsRow: "",
+
         onDraw: Metro.noop,
         onDrawRow: Metro.noop,
         onDrawCell: Metro.noop,
@@ -16969,6 +18226,10 @@ var Table = {
 
         if (Utils.isValue(Metro.locales[o.locale])) {
             this.locale = Metro.locales[o.locale];
+        }
+
+        if (Utils.isValue(o.searchFields)) {
+            this.searchFields = Utils.strToArray(o.searchFields);
         }
 
         if (o.source !== null) {
@@ -17050,39 +18311,45 @@ var Table = {
 
     _service: function(){
         var o = this.options;
-        var item_check, item_rownum;
-        var service = [];
 
-        this.service = {};
-
-        item_rownum = {
-            title: "#",
-            format: undefined,
-            name: undefined,
-            sortable: false,
-            sortDir: undefined,
-            clsColumn: o.rownum !== true ? "d-none" : "",
-            cls: o.rownum !== true ? "d-none" : "",
-            colspan: undefined,
-            type: "rownum"
-        };
-
-        item_check = {
-            title: o.checkType === "checkbox" ? "<input type='checkbox' data-role='checkbox' class='table-service-check-all' data-style='"+o.checkStyle+"'>" : "",
-            format: undefined,
-            name: undefined,
-            sortable: false,
-            sortDir: undefined,
-            clsColumn: o.check !== true ? "d-none" : "",
-            cls: o.check !== true ? "d-none" : "",
-            colspan: undefined,
-            type: "rowcheck"
-        };
-
-        service.push(item_rownum);
-        service.push(item_check);
-
-        this.service = service;
+        this.service = [
+            {
+                // CRUD
+                title: o.crudTitle,
+                format: undefined,
+                name: undefined,
+                sortable: false,
+                sortDir: undefined,
+                clsColumn: "crud-cell" + (o.crud === true ? "" : " d-none "),
+                cls: "crud-cell" + (o.crud === true ? "" : " d-none "),
+                colspan: undefined,
+                type: "button"
+            },
+            {
+                // Rownum
+                title: o.rownumTitle,
+                format: undefined,
+                name: undefined,
+                sortable: false,
+                sortDir: undefined,
+                clsColumn: "rownum-cell " + (o.rownum !== true ? "d-none" : ""),
+                cls: "rownum-cell " + (o.rownum !== true ? "d-none" : ""),
+                colspan: undefined,
+                type: "rownum"
+            },
+            {
+                // Check
+                title: o.checkType === "checkbox" ? "<input type='checkbox' data-role='checkbox' class='table-service-check-all' data-style='"+o.checkStyle+"'>" : "",
+                format: undefined,
+                name: undefined,
+                sortable: false,
+                sortDir: undefined,
+                clsColumn: "check-cell " + (o.check !== true ? "d-none" : ""),
+                cls: "check-cell "+(o.check !== true ? "d-none" : ""),
+                colspan: undefined,
+                type: "rowcheck"
+            }
+        ];
     },
 
     _createView: function(){
@@ -17124,10 +18391,10 @@ var Table = {
             row.data('index-view', i);
             $("<td>").html("<input type='checkbox' data-style='"+o.checkStyle+"' data-role='checkbox' name='column_show_check[]' value='"+i+"' "+(Utils.bool(that.view[i]['show']) ? "checked" : "")+">").appendTo(row);
             $("<td>").html(this.title).appendTo(row);
-            $("<td>").html("<input type='number' name='column_size' value='"+that.view[i]['size']+"' data-index='"+i+"'>").appendTo(row);
+            $("<td>").html("<input type='number' data-role='spinner' name='column_size' value='"+that.view[i]['size']+"' data-index='"+i+"'>").appendTo(row);
             $("<td>").html("" +
-                "<button class='button mini js-table-inspector-field-up' type='button'><span class='mif-arrow-up'></span></button>" +
-                "<button class='button mini js-table-inspector-field-down' type='button'><span class='mif-arrow-down'></span></button>" +
+                "<button class='button square js-table-inspector-field-up' type='button'><span class='mif-arrow-up'></span></button>" +
+                "<button class='button square js-table-inspector-field-down' type='button'><span class='mif-arrow-down'></span></button>" +
                 "").appendTo(row);
             tds[that.view[i]['index-view']] = row;
         });
@@ -17183,30 +18450,40 @@ var Table = {
             var item = $(this);
             var dir, head_item, item_class;
 
-            if (item.hasClass("sort-asc")) {
-                dir = "asc";
-            } else if (item.hasClass("sort-desc")) {
-                dir = "desc"
+            if (Utils.isValue(item.data('sort-dir'))) {
+                dir = item.data('sort-dir');
             } else {
-                dir = undefined;
+                if (item.hasClass("sort-asc")) {
+                    dir = "asc";
+                } else if (item.hasClass("sort-desc")) {
+                    dir = "desc"
+                } else {
+                    dir = undefined;
+                }
             }
 
             item_class = item[0].className.replace("sortable-column", "");
             item_class = item_class.replace("sort-asc", "");
             item_class = item_class.replace("sort-desc", "");
+            item_class = item_class.replace("hidden", "");
 
             head_item = {
+                type: "data",
                 title: item.html(),
-                format: Utils.isValue(item.data("format")) ? item.data("format") : undefined,
-                name: Utils.isValue(item.data("name")) ? item.data("name") : undefined,
-                sortable: item.hasClass("sortable-column"),
+                name: Utils.isValue(item.data("name")) ? item.data("name") : item.text().replace(" ", "_"),
+                sortable: item.hasClass("sortable-column") || (Utils.isValue(item.data('sortable')) && JSON.parse(item.data('sortable') === true)),
                 sortDir: dir,
+                format: Utils.isValue(item.data("format")) ? item.data("format") : "string",
                 clsColumn: Utils.isValue(item.data("cls-column")) ? item.data("cls-column") : "",
                 cls: item_class,
                 colspan: item.attr("colspan"),
-                type: "data",
                 size: Utils.isValue(item.data("size")) ? item.data("size") : "",
-                show: !item.hasClass("hidden") || (Utils.isValue(item.data("show")) && JSON.parse(item.data("show")) === false)
+                show: !(item.hasClass("hidden") || (Utils.isValue(item.data('show')) && JSON.parse(item.data('show')) === false)),
+
+                required: Utils.isValue(item.data("required")) ? JSON.parse(item.data("required")) === true  : false,
+                field: Utils.isValue(item.data("field")) ? item.data("field") : "input",
+                fieldType: Utils.isValue(item.data("field-type")) ? item.data("field-type") : "text",
+                validator: Utils.isValue(item.data("validator")) ? item.data("validator") : null
             };
             that.heads.push(head_item);
         });
@@ -17285,7 +18562,7 @@ var Table = {
         var element = this.element, o = this.options;
         var head = $("<thead>").html('');
         var tr, th, tds = [], j, cells;
-        var view = this.view;
+        var view = o.staticView ? this._createView() : this.view;
 
         element.find("thead").remove();
 
@@ -17303,8 +18580,6 @@ var Table = {
             if (Utils.isValue(item.title)) {th.html(item.title);}
             if (Utils.isValue(item.size)) {th.css({width: item.size});}
             if (Utils.isValue(item.cls)) {classes.push(item.cls);}
-            if (item.type === 'rowcheck') {classes.push("check-cell");}
-            if (item.type === 'rownum') {classes.push("rownum-cell");}
             classes.push(o.clsHeadCell);
             th.addClass(classes.join(" "));
         });
@@ -17533,14 +18808,6 @@ var Table = {
 
         var filter_func;
 
-        if (Utils.isValue(o.filter)) {
-            filter_func = Utils.isFunc(o.filter);
-            if (filter_func === false) {
-                filter_func = Utils.func(o.filter);
-            }
-            that.filterIndex = that.addFilter(filter_func);
-        }
-
         if (Utils.isValue(o.filters)) {
             $.each(Utils.strToArray(o.filters), function(){
                 filter_func = Utils.isFunc(this);
@@ -17651,18 +18918,14 @@ var Table = {
         });
 
         var _search = function(e){
-            that.filterString = this.value.trim().toLowerCase();
-
-            if (that.filterString[that.filterString.length - 1] === ":") {
-                return ;
-            }
+            that.searchString = this.value.trim().toLowerCase();
 
             clearInterval(that.input_interval); that.input_interval = false;
             if (!that.input_interval) that.input_interval = setTimeout(function(){
                 that.currentPage = 1;
                 that._draw();
                 clearInterval(that.input_interval); that.input_interval = false;
-            }, o.filterThreshold);
+            }, o.searchThreshold);
         };
 
         search.on(Metro.events.inputchange, _search);
@@ -17715,6 +18978,10 @@ var Table = {
         }
 
         this._createInspectorEvents();
+
+        element.on(Metro.events.click, ".js-table-crud-button", function(){
+
+        });
     },
 
     _createInspectorEvents: function(){
@@ -17985,30 +19252,43 @@ var Table = {
 
     _filter: function(){
         var that = this, o = this.options, element = this.element;
-        var items, flt, idx = -1, i;
-        if ((Utils.isValue(this.filterString) && that.filterString.length >= o.filterMinLength) || this.filters.length > 0) {
-            flt = this.filterString.split(":");
-            if (flt.length > 1) {
-                $.each(that.heads, function (i, v) {
-                    if (flt[0] === v.title.toLowerCase()) {
-                        idx = i;
-                    }
-                })
-            }
+        var items;
+        if ((Utils.isValue(this.searchString) && that.searchString.length >= o.searchMinLength) || this.filters.length > 0) {
             items = this.items.filter(function(row){
-                var row_data = "" + (flt.length > 1 && idx > -1 ? row[idx] : row.join());
-                var c1 = row_data.replace(/[\n\r]+|[\s]{2,}/g, ' ').trim().toLowerCase();
-                var result = Utils.isValue(that.filterString) && that.filterString.length >= o.filterMinLength ? ~c1.indexOf(flt.length > 1 ? flt[1] : flt[0]) : true;
 
-                if (result === true && that.filters.length > 0) {
+                var row_data = "", result, search_result, i, j = 0;
+
+                if (that.filters.length > 0) {
+
+                    result = o.filtersOperator.toLowerCase() === "and";
                     for (i = 0; i < that.filters.length; i++) {
-                        if (!Utils.isValue(that.filters[i])) continue;
-                        if (Utils.exec(that.filters[i], [row, that.heads]) !== true) {
-                            result = false;
-                            break;
-                        }
+                        if (Utils.isNull(that.filters[i])) continue;
+                        j++;
+                        result = o.filtersOperator.toLowerCase() === "and" ?
+                            result && Utils.exec(that.filters[i], [row, that.heads]) :
+                            result || Utils.exec(that.filters[i], [row, that.heads])
+                        ;
                     }
+
+                    if (j === 0) result = true;
+                } else {
+                    result = true;
                 }
+
+                if (that.searchFields.length > 0) {
+                    $.each(that.heads, function(i, v){
+                        if (that.searchFields.indexOf(v.name) > -1) {
+                            row_data += ""+row[i];
+                        }
+                    })
+                } else {
+                    row_data = row.join("");
+                }
+
+                row_data = row_data.replace(/[\n\r]+|[\s]{2,}/g, ' ').trim().toLowerCase();
+                search_result = Utils.isValue(that.searchString) && that.searchString.length >= o.searchMinLength ? ~row_data.indexOf(that.searchString) : true;
+
+                result = result && search_result;
 
                 if (result) {
                     Utils.exec(o.onFilterRowAccepted, [row], element[0]);
@@ -18019,7 +19299,7 @@ var Table = {
                 return result;
             });
 
-            Utils.exec(o.onSearch, [that.filterString, items], element[0])
+            Utils.exec(o.onSearch, [that.searchString, items], element[0])
         } else {
             items = this.items;
         }
@@ -18037,21 +19317,60 @@ var Table = {
             stop = parseInt(o.rows) === -1 ? this.items.length - 1 : start + o.rows - 1;
         var items;
         var stored_keys = Metro.storage.getItem(o.checkStoreKey.replace("$1", element.attr('id')));
-        var view = this.view;
+
+        var view = o.staticView ? this.viewDefault : this.view;
 
         body.html("");
 
         items = this._filter();
 
         for (i = start; i <= stop; i++) {
-            var j, tr, td, check, cells = [], tds = [];
+            var j, tr, td, check, cells = [], tds = [], is_even_row;
             if (Utils.isValue(items[i])) {
                 tr = $("<tr>").addClass(o.clsBodyRow);
 
-                // Rownum
-                td = $("<td>").html(i + 1);
+                // CRUD buttons
+                td = $("<td>");
                 if (that.service[0].clsColumn !== undefined) {
                     td.addClass(that.service[0].clsColumn);
+                }
+                var crud_container = $("<div>").addClass("crud-container").appendTo(td);
+                if (o.editButton === true) {
+                    $("<button>")
+                        .addClass("button")
+                        .addClass("js-table-crud-button js-table-crud-button-edit")
+                        .addClass(o.clsEditButton)
+                        .html(o.editButtonIcon)
+                        .data("uid", items[i][o.checkColIndex])
+                        .appendTo(crud_container);
+                }
+                if (o.addButton === true) {
+                    $("<button>")
+                        .addClass("button")
+                        .addClass("js-table-crud-button js-table-crud-button-add")
+                        .addClass(o.clsAddButton)
+                        .html(o.addButtonIcon)
+                        .data("uid", null)
+                        .appendTo(crud_container);
+                }
+                if (o.delButton === true) {
+                    $("<button>")
+                        .addClass("button")
+                        .addClass("js-table-crud-button js-table-crud-button-del")
+                        .addClass(o.clsDelButton)
+                        .html(o.delButtonIcon)
+                        .data("uid", items[i][o.checkColIndex])
+                        .appendTo(crud_container);
+                }
+                td.appendTo(tr);
+
+                // Rownum
+
+                is_even_row = i % 2 === 0;
+
+                td = $("<td>").html(i + 1);
+                if (that.service[1].clsColumn !== undefined) {
+                    td.addClass(that.service[1].clsColumn);
                 }
                 td.appendTo(tr);
 
@@ -18070,8 +19389,8 @@ var Table = {
                 check.addClass("table-service-check");
                 Utils.exec(o.onCheckDraw, [check], check[0]);
                 check.appendTo(td);
-                if (that.service[1].clsColumn !== undefined) {
-                    td.addClass(that.service[1].clsColumn);
+                if (that.service[2].clsColumn !== undefined) {
+                    td.addClass(that.service[2].clsColumn);
                 }
                 td.appendTo(tr);
 
@@ -18112,7 +19431,7 @@ var Table = {
 
                 Utils.exec(o.onDrawRow, [tr, that.view, that.heads, element], tr[0]);
 
-                tr.appendTo(body);
+                tr.addClass(o.clsRow).addClass(is_even_row ? o.clsEvenRow : o.clsOddRow).appendTo(body);
 
                 Utils.exec(o.onAppendRow, [tr, element], tr[0]);
             }
@@ -18194,8 +19513,8 @@ var Table = {
         Utils.exec(o.onSortStop, [this.items], element[0]);
     },
 
-    filter: function(val){
-        this.filterString = val.trim().toLowerCase();
+    search: function(val){
+        this.searchString = val.trim().toLowerCase();
         this.currentPage = 1;
         this._draw();
     },
@@ -18319,18 +19638,30 @@ var Table = {
     },
 
     addFilter: function(f, redraw){
-        var func = Utils.isFunc(f);
+        var filterIndex = null, i, func = Utils.isFunc(f);
         if (func === false) {
             return ;
         }
-        this.filters.push(func);
+
+        for(i = 0; i < this.filters.length; i++) {
+            if (Utils.isNull(this.filters[i])) {
+                filterIndex = i;
+                this.filters[i] = func;
+                break;
+            }
+        }
+
+        if (Utils.isNull(filterIndex)) {
+            this.filters.push(func);
+            filterIndex = this.filters.length - 1;
+        }
 
         if (redraw === true) {
             this.currentPage = 1;
             this.draw();
         }
 
-        return this.filters.length - 1;
+        return filterIndex
     },
 
     removeFilter: function(key, redraw){
@@ -18399,16 +19730,16 @@ var Table = {
         return this.filters;
     },
 
-    getFilterIndex: function(){
-        return this.filterIndex;
-    },
-
     getFiltersIndexes: function(){
         return this.filtersIndexes;
     },
 
     openInspector: function(mode){
         this.inspector[mode ? "addClass" : "removeClass"]("open");
+    },
+
+    closeInspector: function(){
+        this.openInspector(false);
     },
 
     toggleInspector: function(){
@@ -18434,6 +19765,10 @@ var Table = {
         var body = $("<tbody>").appendTo(table);
         var i, j, cells, tds = [], items, tr, td;
         var start, stop;
+
+        if (typeof Export.tableToCSV !== 'function') {
+            return ;
+        }
 
         mode = Utils.isValue(mode) ? mode.toLowerCase() : "all-filtered";
         filename = Utils.isValue(filename) ? filename : Utils.elementId("table")+"-export.csv";
@@ -18537,6 +19872,185 @@ var Table = {
 
 Metro.plugin('table', Table);
 
+// Source: js/plugins/tabs-material.js
+var MaterialTabs = {
+    init: function( options, elem ) {
+        this.options = $.extend( {}, this.options, options );
+        this.elem  = elem;
+        this.element = $(elem);
+        this.marker = null;
+
+        this._setOptionsFromDOM();
+        this._create();
+
+        return this;
+    },
+
+    options: {
+        deep: false,
+        fixedTabs: false,
+
+        clsComponent: "",
+        clsTab: "",
+        clsTabActive: "",
+        clsMarker: "",
+
+        onBeforeTabOpen: Metro.noop_true,
+        onTabOpen: Metro.noop,
+        onTabsCreate: Metro.noop
+    },
+
+    _setOptionsFromDOM: function(){
+        var that = this, element = this.element, o = this.options;
+
+        $.each(element.data(), function(key, value){
+            if (key in o) {
+                try {
+                    o[key] = JSON.parse(value);
+                } catch (e) {
+                    o[key] = value;
+                }
+            }
+        });
+    },
+
+    _create: function(){
+        var that = this, element = this.element, o = this.options;
+
+        this._createStructure();
+        this._createEvents();
+
+        Utils.exec(o.onTabsCreate, [element]);
+    },
+
+    _applyColor: function(to, color, option){
+
+        if (!Utils.isJQueryObject(to)) {
+            to = $(to);
+        }
+
+        if (Utils.isValue(color)) {
+            if (Utils.isColor(color)) {
+                to.css(option, color);
+            } else {
+                to.addClass(color);
+            }
+        }
+    },
+
+    _createStructure: function(){
+        var that = this, element = this.element, o = this.options;
+        var tabs = element.find("li"), active_tab = element.find("li.active");
+
+        element.addClass("tabs-material").addClass(o.clsComponent);
+        tabs.addClass(o.clsTab);
+
+        if (o.deep === true) {
+            element.addClass("deep");
+        }
+
+        if (o.fixedTabs === true) {
+            element.addClass("fixed-tabs");
+        }
+
+        this.marker = element.find(".tab-marker");
+
+        if (this.marker.length === 0) {
+            this.marker = $("<span>").addClass("tab-marker").addClass(o.clsMarker).appendTo(element);
+        }
+
+        this.openTab(active_tab.length === 0 ? tabs[0] : active_tab[0]);
+    },
+
+    _createEvents: function(){
+        var that = this, element = this.element, o = this.options;
+        var tabs = element.find("li");
+
+        element.on(Metro.events.click, "li", function(e){
+            var tab = $(this);
+            var active_tab = element.find("li.active");
+            var tab_next = tabs.index(tab) > tabs.index(active_tab);
+            var target = tab.children("a").attr("href");
+
+            if (Utils.isValue(target) && target[0] === "#") {
+                if (tab.hasClass("active")) return;
+                if (tab.hasClass("disabled")) return;
+                if (Utils.exec(o.onBeforeTabOpen, [tab, target, tab_next], this) === false) return;
+                if (!Utils.isValue(target)) return;
+                that.openTab(tab, tab_next);
+                e.preventDefault();
+            }
+        });
+
+        var addMouseWheel = function (){
+            $(element).mousewheel(function(event, delta, deltaX, deltaY){
+                var scroll_value = delta * METRO_SCROLL_MULTIPLE;
+                element.scrollLeft(element.scrollLeft() - scroll_value);
+                return false;
+            });
+        };
+
+        if (!$('html').hasClass("metro-touch-device")) {
+            addMouseWheel();
+        }
+    },
+
+    openTab: function(tab, tab_next){
+        var that = this, element = this.element, o = this.options;
+        var tabs = element.find("li"), element_scroll = element.scrollLeft();
+        var magic = 32, shift, width = element.width(), tab_width, target, tab_left;
+
+        if (!Utils.isJQueryObject(tab)) {
+            tab = $(tab);
+        }
+
+        $.each(tabs, function(){
+            var target = $(this).find("a").attr("href");
+            if (!Utils.isValue(target)) return;
+            if (target.trim() !== "#" && $(target).length > 0) $(target).hide();
+        });
+
+        tab_left = tab.position().left;
+        tab_width = tab.width();
+        shift = tab.position().left + tab.width();
+
+        tabs.removeClass("active").removeClass(o.clsTabActive);
+        tab.addClass("active").addClass(o.clsTabActive);
+
+        if (shift + magic > width) {
+            element.animate({
+                scrollLeft: element_scroll + (shift - width) + (tab_width / 2)
+            });
+        }
+
+        if (tab_left - magic < 0) {
+            element.animate({
+                scrollLeft: tab_left + element_scroll - (tab_width / 2)
+            });
+        }
+
+        this.marker.animate({
+            left: tab_left + element_scroll,
+            width: tab.width()
+        });
+
+        target = tab.find("a").attr("href");
+        if (Utils.isValue(target)) {
+            if (target.trim() !== "#" && $(target).length > 0) $(target).show();
+        }
+
+        Utils.exec(o.onTabOpen, [tab, target, tab_next], tab[0]);
+    },
+
+    changeAttribute: function(attributeName){
+
+    },
+
+    destroy: function(){}
+};
+
+Metro.plugin('materialtabs', MaterialTabs);
+
 // Source: js/plugins/tabs.js
 var Tabs = {
     init: function( options, elem ) {
@@ -18554,12 +20068,14 @@ var Tabs = {
     },
 
     options: {
-        expand: null,
+        expand: false,
+        expandPoint: null,
         tabsPosition: "top",
 
         clsTabs: "",
         clsTabsList: "",
         clsTabsListItem: "",
+        clsTabsListItemActive: "",
 
         onTab: Metro.noop,
         onBeforeTab: Metro.noop_true,
@@ -18597,14 +20113,11 @@ var Tabs = {
         var container = right_parent ? parent : $("<div>").addClass("tabs tabs-wrapper");
         var expandTitle, hamburger;
 
-        if (Utils.isValue(o.expand)) {
-            container.addClass("tabs-expand-"+o.expand);
+        if (!Utils.isValue(element.attr("id"))) {
+            element.attr("id", Utils.elementId("tabs"));
         }
 
         container.addClass(o.tabsPosition.replace(["-", "_", "+"], " "));
-        if (o.tabsPosition.contains("vertical")) {
-            container.addClass("tabs-expand-fs"); // TODO need redesign this behavior
-        }
 
         element.addClass("tabs-list");
         if (!right_parent) {
@@ -18630,11 +20143,41 @@ var Tabs = {
         container.addClass(o.clsTabs);
         element.addClass(o.clsTabsList);
         element.children("li").addClass(o.clsTabsListItem);
+
+        if (o.expand === true && !o.tabsPosition.contains("vertical")) {
+            container.addClass("tabs-expand");
+        } else {
+            if (Utils.isValue(o.expandPoint) && Utils.mediaExist(o.expandPoint) && !o.tabsPosition.contains("vertical")) {
+                container.addClass("tabs-expand");
+            }
+        }
+
+        if (o.tabsPosition.contains("vertical")) {
+            container.addClass("tabs-expand");
+        }
+
     },
 
     _createEvents: function(){
         var that = this, element = this.element, o = this.options;
         var container = element.parent();
+
+        $(window).on(Metro.events.resize+"-"+element.attr("id"), function(){
+
+            if (o.tabsPosition.contains("vertical")) {
+                return ;
+            }
+
+            if (o.expand === true && !o.tabsPosition.contains("vertical")) {
+                container.addClass("tabs-expand");
+            } else {
+                if (Utils.isValue(o.expandPoint) && Utils.mediaExist(o.expandPoint) && !o.tabsPosition.contains("vertical")) {
+                    if (!container.hasClass("tabs-expand")) container.addClass("tabs-expand");
+                } else {
+                    if (container.hasClass("tabs-expand")) container.removeClass("tabs-expand");
+                }
+            }
+        });
 
         container.on(Metro.events.click, ".hamburger, .expand-title", function(){
             if (element.data('expanded') === false) {
@@ -18726,7 +20269,9 @@ var Tabs = {
 
         expandTitle.html(tab.find("a").html());
 
-        Utils.exec(o.onTab, [tab, element]);
+        tab.addClass(o.clsTabsListItemActive);
+
+        Utils.exec(o.onTab, [tab, element], tab[0]);
     },
 
     next: function(){
@@ -19745,21 +21290,21 @@ var TimePicker = {
         var h = "00", m = "00", s = "00";
 
         if (o.hours === true) {
-            h = this.value[0];
+            h = parseInt(this.value[0]);
             if (h < 10) {
                 h = "0"+h;
             }
             picker.find(".hours").html(h);
         }
         if (o.minutes === true) {
-            m = this.value[1];
+            m = parseInt(this.value[1]);
             if (m < 10) {
                 m = "0"+m;
             }
             picker.find(".minutes").html(m);
         }
         if (o.seconds === true) {
-            s = this.value[2];
+            s = parseInt(this.value[2]);
             if (s < 10) {
                 s = "0"+s;
             }
@@ -19934,6 +21479,1074 @@ var Toast = {
 
 Metro['toast'] = Toast;
 
+// Source: js/plugins/touch.js
+var TouchConst = {
+    LEFT : "left",
+    RIGHT : "right",
+    UP : "up",
+    DOWN : "down",
+    IN : "in",
+    OUT : "out",
+    NONE : "none",
+    AUTO : "auto",
+    SWIPE : "swipe",
+    PINCH : "pinch",
+    TAP : "tap",
+    DOUBLE_TAP : "doubletap",
+    LONG_TAP : "longtap",
+    HOLD : "hold",
+    HORIZONTAL : "horizontal",
+    VERTICAL : "vertical",
+    ALL_FINGERS : "all",
+    DOUBLE_TAP_THRESHOLD : 10,
+    PHASE_START : "start",
+    PHASE_MOVE : "move",
+    PHASE_END : "end",
+    PHASE_CANCEL : "cancel",
+    SUPPORTS_TOUCH : 'ontouchstart' in window,
+    SUPPORTS_POINTER_IE10 : window.navigator.msPointerEnabled && !window.navigator.pointerEnabled && !('ontouchstart' in window),
+    SUPPORTS_POINTER : (window.navigator.pointerEnabled || window.navigator.msPointerEnabled) && !('ontouchstart' in window),
+    IN_TOUCH: "intouch"
+};
+
+var Touch = {
+    init: function( options, elem ) {
+        this.options = $.extend( {}, this.options, options );
+        this.elem  = elem;
+        this.element = $(elem);
+
+        this.useTouchEvents = (TouchConst.SUPPORTS_TOUCH || TouchConst.SUPPORTS_POINTER || !this.options.fallbackToMouseEvents);
+        this.START_EV = this.useTouchEvents ? (TouchConst.SUPPORTS_POINTER ? (TouchConst.SUPPORTS_POINTER_IE10 ? 'MSPointerDown' : 'pointerdown') : 'touchstart') : 'mousedown';
+        this.MOVE_EV = this.useTouchEvents ? (TouchConst.SUPPORTS_POINTER ? (TouchConst.SUPPORTS_POINTER_IE10 ? 'MSPointerMove' : 'pointermove') : 'touchmove') : 'mousemove';
+        this.END_EV = this.useTouchEvents ? (TouchConst.SUPPORTS_POINTER ? (TouchConst.SUPPORTS_POINTER_IE10 ? 'MSPointerUp' : 'pointerup') : 'touchend') : 'mouseup';
+        this.LEAVE_EV = this.useTouchEvents ? (TouchConst.SUPPORTS_POINTER ? 'mouseleave' : null) : 'mouseleave'; //we manually detect leave on touch devices, so null event here
+        this.CANCEL_EV = (TouchConst.SUPPORTS_POINTER ? (TouchConst.SUPPORTS_POINTER_IE10 ? 'MSPointerCancel' : 'pointercancel') : 'touchcancel');
+
+        //touch properties
+        this.distance = 0;
+        this.direction = null;
+        this.currentDirection = null;
+        this.duration = 0;
+        this.startTouchesDistance = 0;
+        this.endTouchesDistance = 0;
+        this.pinchZoom = 1;
+        this.pinchDistance = 0;
+        this.pinchDirection = 0;
+        this.maximumsMap = null;
+
+        //Current phase of th touch cycle
+        this.phase = "start";
+
+        // the current number of fingers being used.
+        this.fingerCount = 0;
+
+        //track mouse points / delta
+        this.fingerData = {};
+
+        //track times
+        this.startTime = 0;
+        this.endTime = 0;
+        this.previousTouchEndTime = 0;
+        this.fingerCountAtRelease = 0;
+        this.doubleTapStartTime = 0;
+
+        //Timeouts
+        this.singleTapTimeout = null;
+        this.holdTimeout = null;
+
+        this._setOptionsFromDOM();
+        this._create();
+
+        return this;
+    },
+
+    options: {
+        fingers: 1,
+        threshold: 75,
+        cancelThreshold: null,
+        pinchThreshold: 20,
+        maxTimeThreshold: null,
+        fingerReleaseThreshold: 250,
+        longTapThreshold: 500,
+        doubleTapThreshold: 200,
+        triggerOnTouchEnd: true,
+        triggerOnTouchLeave: false,
+        allowPageScroll: "auto",
+        fallbackToMouseEvents: true,
+        excludedElements: ".no-swipe",
+        preventDefaultEvents: true,
+
+        onSwipe: Metro.noop,
+        onSwipeLeft: Metro.noop,
+        onSwipeRight: Metro.noop,
+        onSwipeUp: Metro.noop,
+        onSwipeDown: Metro.noop,
+        onSwipeStatus: Metro.noop_true, // params: phase, direction, distance, duration, fingerCount, fingerData, currentDirection
+        onPinchIn: Metro.noop,
+        onPinchOut: Metro.noop,
+        onPinchStatus: Metro.noop_true,
+        onTap: Metro.noop,
+        onDoubleTap: Metro.noop,
+        onLongTap: Metro.noop,
+        onHold: Metro.noop,
+
+        onSwipeCreate: Metro.noop
+    },
+
+    _setOptionsFromDOM: function(){
+        var element = this.element, o = this.options;
+
+        $.each(element.data(), function(key, value){
+            if (key in o) {
+                try {
+                    o[key] = JSON.parse(value);
+                } catch (e) {
+                    o[key] = value;
+                }
+            }
+        });
+    },
+
+    _create: function(){
+        var that = this, element = this.element, o = this.options;
+
+        if (o.allowPageScroll === undefined && (o.onSwipe !== Metro.noop || o.onSwipeStatus !== Metro.noop)) {
+            o.allowPageScroll = TouchConst.NONE;
+        }
+
+        try {
+            element.bind(this.START_EV, $.proxy(this.touchStart, that));
+            element.bind(this.CANCEL_EV, $.proxy(this.touchCancel, that));
+        } catch (e) {
+            $.error('Events not supported ' + this.START_EV + ',' + this.CANCEL_EV + ' on Swipe');
+        }
+
+        Utils.exec(o.onSwipeCreate, [element]);
+    },
+
+    touchStart: function(e) {
+        var element = this.element, options = this.options;
+
+        //If we already in a touch event (a finger already in use) then ignore subsequent ones..
+        if (this.getTouchInProgress()) {
+            return;
+        }
+
+        //Check if this element matches any in the excluded elements selectors,  or its parent is excluded, if so, DON'T swipe
+        if ($(e.target).closest(options.excludedElements, element).length > 0) {
+            return;
+        }
+
+        //As we use Jquery bind for events, we need to target the original event object
+        //If these events are being programmatically triggered, we don't have an original event object, so use the Jq one.
+        var event = e.originalEvent ? e.originalEvent : e;
+
+        var ret,
+            touches = event.touches,
+            evt = touches ? touches[0] : event;
+
+        this.phase = TouchConst.PHASE_START;
+
+        //If we support touches, get the finger count
+        if (touches) {
+            // get the total number of fingers touching the screen
+            this.fingerCount = touches.length;
+        }
+        //Else this is the desktop, so stop the browser from dragging content
+        else if (options.preventDefaultEvents !== false) {
+            e.preventDefault(); //call this on jq event so we are cross browser
+        }
+
+        //clear vars..
+        this.distance = 0;
+        this.direction = null;
+        this.currentDirection=null;
+        this.pinchDirection = null;
+        this.duration = 0;
+        this.startTouchesDistance = 0;
+        this.endTouchesDistance = 0;
+        this.pinchZoom = 1;
+        this.pinchDistance = 0;
+        this.maximumsMap = this.createMaximumsData();
+        this.cancelMultiFingerRelease();
+
+        //Create the default finger data
+        this.createFingerData(0, evt);
+
+        // check the number of fingers is what we are looking for, or we are capturing pinches
+        if (!touches || (this.fingerCount === options.fingers || options.fingers === TouchConst.ALL_FINGERS) || this.hasPinches()) {
+            // get the coordinates of the touch
+            this.startTime = this.getTimeStamp();
+
+            if (this.fingerCount === 2) {
+                //Keep track of the initial pinch distance, so we can calculate the diff later
+                //Store second finger data as start
+                this.createFingerData(1, touches[1]);
+                this.startTouchesDistance = this.endTouchesDistance = this.calculateTouchesDistance(this.fingerData[0].start, this.fingerData[1].start);
+            }
+
+            if (options.onSwipeStatus !== Metro.noop || options.onPinchStatus !== Metro.noop) {
+                ret = this.triggerHandler(event, this.phase);
+            }
+        } else {
+            //A touch with more or less than the fingers we are looking for, so cancel
+            ret = false;
+        }
+
+        //If we have a return value from the users handler, then return and cancel
+        if (ret === false) {
+            this.phase = TouchConst.PHASE_CANCEL;
+            this.triggerHandler(event, this.phase);
+            return ret;
+        } else {
+            if (options.onHold !== Metro.noop) {
+                this.holdTimeout = setTimeout($.proxy(function() {
+                    //Trigger the event
+                    element.trigger('hold', [event.target]);
+                    //Fire the callback
+                    if (options.onHold !== Metro.noop) { // TODO Remove this if
+                        ret = Utils.exec(options.onHold, [event, event.target], element[0]);
+                    }
+                }, this), options.longTapThreshold);
+            }
+
+            this.setTouchInProgress(true);
+        }
+
+        return null;
+    },
+
+    touchMove: function(e) {
+        //As we use Jquery bind for events, we need to target the original event object
+        //If these events are being programmatically triggered, we don't have an original event object, so use the Jq one.
+        var event = e.originalEvent ? e.originalEvent : e;
+
+        //If we are ending, cancelling, or within the threshold of 2 fingers being released, don't track anything..
+        if (this.phase === TouchConst.PHASE_END || this.phase === TouchConst.PHASE_CANCEL || this.inMultiFingerRelease())
+            return;
+
+        var ret,
+            touches = event.touches,
+            evt = touches ? touches[0] : event;
+
+        //Update the  finger data
+        var currentFinger = this.updateFingerData(evt);
+        this.endTime = this.getTimeStamp();
+
+        if (touches) {
+            this.fingerCount = touches.length;
+        }
+
+        if (this.options.onHold !== Metro.noop) {
+            clearTimeout(this.holdTimeout);
+        }
+
+        this.phase = TouchConst.PHASE_MOVE;
+
+        //If we have 2 fingers get Touches distance as well
+        if (this.fingerCount === 2) {
+
+            //Keep track of the initial pinch distance, so we can calculate the diff later
+            //We do this here as well as the start event, in case they start with 1 finger, and the press 2 fingers
+            if (this.startTouchesDistance === 0) {
+                //Create second finger if this is the first time...
+                this.createFingerData(1, touches[1]);
+
+                this.startTouchesDistance = this.endTouchesDistance = this.calculateTouchesDistance(this.fingerData[0].start, this.fingerData[1].start);
+            } else {
+                //Else just update the second finger
+                this.updateFingerData(touches[1]);
+
+                this.endTouchesDistance = this.calculateTouchesDistance(this.fingerData[0].end, this.fingerData[1].end);
+                this.pinchDirection = this.calculatePinchDirection(this.fingerData[0].end, this.fingerData[1].end);
+            }
+
+            this.pinchZoom = this.calculatePinchZoom(this.startTouchesDistance, this.endTouchesDistance);
+            this.pinchDistance = Math.abs(this.startTouchesDistance - this.endTouchesDistance);
+        }
+
+        if ((this.fingerCount === this.options.fingers || this.options.fingers === TouchConst.ALL_FINGERS) || !touches || this.hasPinches()) {
+
+            //The overall direction of the swipe. From start to now.
+            this.direction = this.calculateDirection(currentFinger.start, currentFinger.end);
+
+            //The immediate direction of the swipe, direction between the last movement and this one.
+            this.currentDirection = this.calculateDirection(currentFinger.last, currentFinger.end);
+
+            //Check if we need to prevent default event (page scroll / pinch zoom) or not
+            this.validateDefaultEvent(e, this.currentDirection);
+
+            //Distance and duration are all off the main finger
+            this.distance = this.calculateDistance(currentFinger.start, currentFinger.end);
+            this.duration = this.calculateDuration();
+
+            //Cache the maximum distance we made in this direction
+            this.setMaxDistance(this.direction, this.distance);
+
+            //Trigger status handler
+            ret = this.triggerHandler(event, this.phase);
+
+
+            //If we trigger end events when threshold are met, or trigger events when touch leaves element
+            if (!this.options.triggerOnTouchEnd || this.options.triggerOnTouchLeave) {
+
+                var inBounds = true;
+
+                //If checking if we leave the element, run the bounds check (we can use touchleave as its not supported on webkit)
+                if (this.options.triggerOnTouchLeave) {
+                    var bounds = this.getBounds(this);
+                    inBounds = this.isInBounds(currentFinger.end, bounds);
+                }
+
+                //Trigger end handles as we swipe if thresholds met or if we have left the element if the user has asked to check these..
+                if (!this.options.triggerOnTouchEnd && inBounds) {
+                    this.phase = this.getNextPhase(TouchConst.PHASE_MOVE);
+                }
+                //We end if out of bounds here, so set current phase to END, and check if its modified
+                else if (this.options.triggerOnTouchLeave && !inBounds) {
+                    this.phase = this.getNextPhase(TouchConst.PHASE_END);
+                }
+
+                if (this.phase === TouchConst.PHASE_CANCEL || this.phase === TouchConst.PHASE_END) {
+                    this.triggerHandler(event, this.phase);
+                }
+            }
+        } else {
+            this.phase = TouchConst.PHASE_CANCEL;
+            this.triggerHandler(event, this.phase);
+        }
+
+        if (ret === false) {
+            this.phase = TouchConst.PHASE_CANCEL;
+            this.triggerHandler(event, this.phase);
+        }
+    },
+
+    touchEnd: function(e) {
+        //As we use Jquery bind for events, we need to target the original event object
+        //If these events are being programmatically triggered, we don't have an original event object, so use the Jq one.
+        var event = e.originalEvent ? e.originalEvent : e,
+            touches = event.touches;
+
+        //If we are still in a touch with the device wait a fraction and see if the other finger comes up
+        //if it does within the threshold, then we treat it as a multi release, not a single release and end the touch / swipe
+        if (touches) {
+            if (touches.length && !this.inMultiFingerRelease()) {
+                this.startMultiFingerRelease(event);
+                return true;
+            } else if (touches.length && this.inMultiFingerRelease()) {
+                return true;
+            }
+        }
+
+        //If a previous finger has been released, check how long ago, if within the threshold, then assume it was a multifinger release.
+        //This is used to allow 2 fingers to release fractionally after each other, whilst maintaining the event as containing 2 fingers, not 1
+        if (this.inMultiFingerRelease()) {
+            this.fingerCount = this.fingerCountAtRelease;
+        }
+
+        //Set end of swipe
+        this.endTime = this.getTimeStamp();
+
+        //Get duration incase move was never fired
+        this.duration = this.calculateDuration();
+
+        //If we trigger handlers at end of swipe OR, we trigger during, but they didnt trigger and we are still in the move phase
+        if (this.didSwipeBackToCancel() || !this.validateSwipeDistance()) {
+            this.phase = TouchConst.PHASE_CANCEL;
+            this.triggerHandler(event, this.phase);
+        } else if (this.options.triggerOnTouchEnd || (this.options.triggerOnTouchEnd === false && this.phase === TouchConst.PHASE_MOVE)) {
+            //call this on jq event so we are cross browser
+            if (this.options.preventDefaultEvents !== false) {
+                e.preventDefault();
+            }
+            this.phase = TouchConst.PHASE_END;
+            this.triggerHandler(event, this.phase);
+        }
+        //Special cases - A tap should always fire on touch end regardless,
+        //So here we manually trigger the tap end handler by itself
+        //We dont run trigger handler as it will re-trigger events that may have fired already
+        else if (!this.options.triggerOnTouchEnd && this.hasTap()) {
+            //Trigger the pinch events...
+            this.phase = TouchConst.PHASE_END;
+            this.triggerHandlerForGesture(event, this.phase, TouchConst.TAP);
+        } else if (this.phase === TouchConst.PHASE_MOVE) {
+            this.phase = TouchConst.PHASE_CANCEL;
+            this.triggerHandler(event, this.phase);
+        }
+
+        this.setTouchInProgress(false);
+
+        return null;
+    },
+
+    touchCancel: function() {
+        // reset the variables back to default values
+        this.fingerCount = 0;
+        this.endTime = 0;
+        this.startTime = 0;
+        this.startTouchesDistance = 0;
+        this.endTouchesDistance = 0;
+        this.pinchZoom = 1;
+
+        //If we were in progress of tracking a possible multi touch end, then re set it.
+        this.cancelMultiFingerRelease();
+
+        this.setTouchInProgress(false);
+    },
+
+    touchLeave: function(e) {
+        //If these events are being programmatically triggered, we don't have an original event object, so use the Jq one.
+        var event = e.originalEvent ? e.originalEvent : e;
+
+        //If we have the trigger on leave property set....
+        if (this.options.triggerOnTouchLeave) {
+            this.phase = this.getNextPhase(TouchConst.PHASE_END);
+            this.triggerHandler(event, this.phase);
+        }
+    },
+
+    getNextPhase: function(currentPhase) {
+        var options  = this.options;
+        var nextPhase = currentPhase;
+
+        // Ensure we have valid swipe (under time and over distance  and check if we are out of bound...)
+        var validTime = this.validateSwipeTime();
+        var validDistance = this.validateSwipeDistance();
+        var didCancel = this.didSwipeBackToCancel();
+
+        //If we have exceeded our time, then cancel
+        if (!validTime || didCancel) {
+            nextPhase = TouchConst.PHASE_CANCEL;
+        }
+        //Else if we are moving, and have reached distance then end
+        else if (validDistance && currentPhase === TouchConst.PHASE_MOVE && (!options.triggerOnTouchEnd || options.triggerOnTouchLeave)) {
+            nextPhase = TouchConst.PHASE_END;
+        }
+        //Else if we have ended by leaving and didn't reach distance, then cancel
+        else if (!validDistance && currentPhase === TouchConst.PHASE_END && options.triggerOnTouchLeave) {
+            nextPhase = TouchConst.PHASE_CANCEL;
+        }
+
+        return nextPhase;
+    },
+
+    triggerHandler: function(event, phase) {
+        var ret,
+            touches = event.touches;
+
+        // SWIPE GESTURES
+        if (this.didSwipe() || this.hasSwipes()) {
+            ret = this.triggerHandlerForGesture(event, phase, TouchConst.SWIPE);
+        }
+
+        // PINCH GESTURES (if the above didn't cancel)
+        if ((this.didPinch() || this.hasPinches()) && ret !== false) {
+            ret = this.triggerHandlerForGesture(event, phase, TouchConst.PINCH);
+        }
+
+        // CLICK / TAP (if the above didn't cancel)
+        if (this.didDoubleTap() && ret !== false) {
+            //Trigger the tap events...
+            ret = this.triggerHandlerForGesture(event, phase, TouchConst.DOUBLE_TAP);
+        }
+
+        // CLICK / TAP (if the above didn't cancel)
+        else if (this.didLongTap() && ret !== false) {
+            //Trigger the tap events...
+            ret = this.triggerHandlerForGesture(event, phase, TouchConst.LONG_TAP);
+        }
+
+        // CLICK / TAP (if the above didn't cancel)
+        else if (this.didTap() && ret !== false) {
+            //Trigger the tap event..
+            ret = this.triggerHandlerForGesture(event, phase, TouchConst.TAP);
+        }
+
+        // If we are cancelling the gesture, then manually trigger the reset handler
+        if (phase === TouchConst.PHASE_CANCEL) {
+            this.touchCancel(event);
+        }
+
+        // If we are ending the gesture, then manually trigger the reset handler IF all fingers are off
+        if (phase === TouchConst.PHASE_END) {
+            //If we support touch, then check that all fingers are off before we cancel
+            if (touches) {
+                if (!touches.length) {
+                    this.touchCancel(event);
+                }
+            } else {
+                this.touchCancel(event);
+            }
+        }
+
+        return ret;
+    },
+
+    triggerHandlerForGesture: function(event, phase, gesture) {
+
+        var ret, element = this.element, options = this.options;
+
+        //SWIPES....
+        if (gesture === TouchConst.SWIPE) {
+            //Trigger status every time..
+            element.trigger('swipeStatus', [phase, this.direction || null, this.distance || 0, this.duration || 0, this.fingerCount, this.fingerData, this.currentDirection]);
+
+            ret = Utils.exec(options.onSwipeStatus, [event, phase, this.direction || null, this.distance || 0, this.duration || 0, this.fingerCount, this.fingerData, this.currentDirection], element[0]);
+            if (ret === false) return false;
+
+            if (phase === TouchConst.PHASE_END && this.validateSwipe()) {
+
+                //Cancel any taps that were in progress...
+                clearTimeout(this.singleTapTimeout);
+                clearTimeout(this.holdTimeout);
+
+                element.trigger('swipe', [this.direction, this.distance, this.duration, this.fingerCount, this.fingerData, this.currentDirection]);
+
+                ret = Utils.exec(options.onSwipe, [event, this.direction, this.distance, this.duration, this.fingerCount, this.fingerData, this.currentDirection], element[0]);
+                if (ret === false) return false;
+
+                //trigger direction specific event handlers
+                switch (this.direction) {
+                    case TouchConst.LEFT:
+                        element.trigger('swipeLeft', [this.direction, this.distance, this.duration, this.fingerCount, this.fingerData, this.currentDirection]);
+                        ret = Utils.exec(options.onSwipeLeft, [event, this.direction, this.distance, this.duration, this.fingerCount, this.fingerData, this.currentDirection], element[0]);
+                        break;
+
+                    case TouchConst.RIGHT:
+                        element.trigger('swipeRight', [this.direction, this.distance, this.duration, this.fingerCount, this.fingerData, this.currentDirection]);
+                        ret = Utils.exec(options.onSwipeRight, [event, this.direction, this.distance, this.duration, this.fingerCount, this.fingerData, this.currentDirection], element[0]);
+                        break;
+
+                    case TouchConst.UP:
+                        element.trigger('swipeUp', [this.direction, this.distance, this.duration, this.fingerCount, this.fingerData, this.currentDirection]);
+                        ret = Utils.exec(options.onSwipeUp, [event, this.direction, this.distance, this.duration, this.fingerCount, this.fingerData, this.currentDirection], element[0]);
+                        break;
+
+                    case TouchConst.DOWN:
+                        element.trigger('swipeDown', [this.direction, this.distance, this.duration, this.fingerCount, this.fingerData, this.currentDirection]);
+                        ret = Utils.exec(options.onSwipeDown, [event, this.direction, this.distance, this.duration, this.fingerCount, this.fingerData, this.currentDirection], element[0]);
+                        break;
+                }
+            }
+        }
+
+
+        //PINCHES....
+        if (gesture === TouchConst.PINCH) {
+            element.trigger('pinchStatus', [phase, this.pinchDirection || null, this.pinchDistance || 0, this.duration || 0, this.fingerCount, this.fingerData, this.pinchZoom]);
+
+            ret = Utils.exec(options.onPinchStatus, [event, phase, this.pinchDirection || null, this.pinchDistance || 0, this.duration || 0, this.fingerCount, this.fingerData, this.pinchZoom], element[0]);
+            if (ret === false) return false;
+
+            if (phase === TouchConst.PHASE_END && this.validatePinch()) {
+
+                switch (this.pinchDirection) {
+                    case TouchConst.IN:
+                        element.trigger('pinchIn', [this.pinchDirection || null, this.pinchDistance || 0, this.duration || 0, this.fingerCount, this.fingerData, this.pinchZoom]);
+                        ret = Utils.exec(options.onPinchIn, [event, this.pinchDirection || null, this.pinchDistance || 0, this.duration || 0, this.fingerCount, this.fingerData, this.pinchZoom], element[0]);
+                        break;
+
+                    case TouchConst.OUT:
+                        element.trigger('pinchOut', [this.pinchDirection || null, this.pinchDistance || 0, this.duration || 0, this.fingerCount, this.fingerData, this.pinchZoom]);
+                        ret = Utils.exec(options.onPinchOut, [event, this.pinchDirection || null, this.pinchDistance || 0, this.duration || 0, this.fingerCount, this.fingerData, this.pinchZoom], element[0]);
+                        break;
+                }
+            }
+        }
+
+        if (gesture === TouchConst.TAP) {
+            if (phase === TouchConst.PHASE_CANCEL || phase === TouchConst.PHASE_END) {
+
+                clearTimeout(this.singleTapTimeout);
+                clearTimeout(this.holdTimeout);
+
+                //If we are also looking for doubelTaps, wait incase this is one...
+                if (this.hasDoubleTap() && !this.inDoubleTap()) {
+                    this.doubleTapStartTime = this.getTimeStamp();
+
+                    //Now wait for the double tap timeout, and trigger this single tap
+                    //if its not cancelled by a double tap
+                    this.singleTapTimeout = setTimeout($.proxy(function() {
+                        this.doubleTapStartTime = null;
+                        element.trigger('tap', [event.target]);
+
+                        ret = Utils.exec(options.onTap, [event, event.target], element[0]);
+                    }, this), options.doubleTapThreshold);
+
+                } else {
+                    this.doubleTapStartTime = null;
+                    element.trigger('tap', [event.target]);
+                    ret = Utils.exec(options.onTap, [event, event.target], element[0]);
+                }
+            }
+        } else if (gesture === TouchConst.DOUBLE_TAP) {
+            if (phase === TouchConst.PHASE_CANCEL || phase === TouchConst.PHASE_END) {
+                clearTimeout(this.singleTapTimeout);
+                clearTimeout(this.holdTimeout);
+                this.doubleTapStartTime = null;
+                element.trigger('doubletap', [event.target]);
+                ret = Utils.exec(options.onDoubleTap, [event, event.target], element[0]);
+            }
+        } else if (gesture === TouchConst.LONG_TAP) {
+            if (phase === TouchConst.PHASE_CANCEL || phase === TouchConst.PHASE_END) {
+                clearTimeout(this.singleTapTimeout);
+                this.doubleTapStartTime = null;
+                element.trigger('longtap', [event.target]);
+                ret = Utils.exec(options.onLongTap, [event, event.target], element[0]);
+            }
+        }
+
+        return ret;
+    },
+
+    validateSwipeDistance: function() {
+        var valid = true;
+        //If we made it past the min swipe distance..
+        if (this.options.threshold !== null) {
+            valid = this.distance >= this.options.threshold;
+        }
+
+        return valid;
+    },
+
+    didSwipeBackToCancel: function() {
+        var options = this.options;
+        var cancelled = false;
+        if (options.cancelThreshold !== null && this.direction !== null) {
+            cancelled = (this.getMaxDistance(this.direction) - this.distance) >= options.cancelThreshold;
+        }
+
+        return cancelled;
+    },
+
+    validatePinchDistance: function() {
+        if (this.options.pinchThreshold !== null) {
+            return this.pinchDistance >= this.options.pinchThreshold;
+        }
+        return true;
+    },
+
+    validateSwipeTime: function() {
+        var result, options = this.options;
+
+        if (options.maxTimeThreshold) {
+            result = duration < options.maxTimeThreshold;
+        } else {
+            result = true;
+        }
+
+        return result;
+    },
+
+    validateDefaultEvent: function(e, direction) {
+        var options = this.options;
+
+        //If the option is set, allways allow the event to bubble up (let user handle weirdness)
+        if (options.preventDefaultEvents === false) {
+            return;
+        }
+
+        if (options.allowPageScroll === TouchConst.NONE) {
+            e.preventDefault();
+        } else {
+            var auto = options.allowPageScroll === TouchConst.AUTO;
+
+            switch (direction) {
+                case TouchConst.LEFT:
+                    if ((options.onSwipeLeft !== Metro.noop && auto) || (!auto && options.allowPageScroll.toLowerCase() !== TouchConst.HORIZONTAL)) {
+                        e.preventDefault();
+                    }
+                    break;
+
+                case TouchConst.RIGHT:
+                    if ((options.onSwipeRight !== Metro.noop && auto) || (!auto && options.allowPageScroll.toLowerCase() !== TouchConst.HORIZONTAL)) {
+                        e.preventDefault();
+                    }
+                    break;
+
+                case TouchConst.UP:
+                    if ((options.onSwipeUp !== Metro.noop && auto) || (!auto && options.allowPageScroll.toLowerCase() !== TouchConst.VERTICAL)) {
+                        e.preventDefault();
+                    }
+                    break;
+
+                case TouchConst.DOWN:
+                    if ((options.onSwipeDown !== Metro.noop && auto) || (!auto && options.allowPageScroll.toLowerCase() !== TouchConst.VERTICAL)) {
+                        e.preventDefault();
+                    }
+                    break;
+
+                case TouchConst.NONE:
+
+                    break;
+            }
+        }
+    },
+
+    validatePinch: function() {
+        var hasCorrectFingerCount = this.validateFingers();
+        var hasEndPoint = this.validateEndPoint();
+        var hasCorrectDistance = this.validatePinchDistance();
+        return hasCorrectFingerCount && hasEndPoint && hasCorrectDistance;
+    },
+
+    hasPinches: function() {
+        //Enure we dont return 0 or null for false values
+        return !!(this.options.onPinchStatus || this.options.onPinchIn || this.options.onPinchOut);
+    },
+
+    didPinch: function() {
+        //Enure we dont return 0 or null for false values
+        return !!(this.validatePinch() && this.hasPinches());
+    },
+
+    validateSwipe: function() {
+        //Check validity of swipe
+        var hasValidTime = this.validateSwipeTime();
+        var hasValidDistance = this.validateSwipeDistance();
+        var hasCorrectFingerCount = this.validateFingers();
+        var hasEndPoint = this.validateEndPoint();
+        var didCancel = this.didSwipeBackToCancel();
+
+        // if the user swiped more than the minimum length, perform the appropriate action
+        // hasValidDistance is null when no distance is set
+        return !didCancel && hasEndPoint && hasCorrectFingerCount && hasValidDistance && hasValidTime;
+    },
+
+    hasSwipes: function() {
+        //Enure we dont return 0 or null for false values
+        return !!(
+            this.options.onSwipe !== Metro.noop
+            || this.options.onSwipeStatus  !== Metro.noop
+            || this.options.onSwipeLeft  !== Metro.noop
+            || this.options.onSwipeRight  !== Metro.noop
+            || this.options.onSwipeUp  !== Metro.noop
+            || this.options.onSwipeDown !== Metro.noop
+        );
+    },
+
+    didSwipe: function() {
+        //Enure we dont return 0 or null for false values
+        return !!(this.validateSwipe() && this.hasSwipes());
+    },
+
+    validateFingers: function() {
+        //The number of fingers we want were matched, or on desktop we ignore
+        return ((this.fingerCount === this.options.fingers || this.options.fingers === TouchConst.ALL_FINGERS) || !TouchConst.SUPPORTS_TOUCH);
+    },
+
+    validateEndPoint: function() {
+        //We have an end value for the finger
+        return this.fingerData[0].end.x !== 0;
+    },
+
+    hasTap: function() {
+        //Enure we dont return 0 or null for false values
+        return this.options.onTap !== Metro.noop;
+    },
+
+    hasDoubleTap: function() {
+        //Enure we dont return 0 or null for false values
+        return this.options.onDoubleTap !== Metro.noop;
+    },
+
+    hasLongTap: function() {
+        //Enure we dont return 0 or null for false values
+        return this.options.onLongTap !== Metro.noop;
+    },
+
+    validateDoubleTap: function() {
+        if (this.doubleTapStartTime == null) {
+            return false;
+        }
+        var now = this.getTimeStamp();
+        return (this.hasDoubleTap() && ((now - this.doubleTapStartTime) <= this.options.doubleTapThreshold));
+    },
+
+    inDoubleTap: function() {
+        return this.validateDoubleTap();
+    },
+
+    validateTap: function() {
+        return ((this.fingerCount === 1 || !TouchConst.SUPPORTS_TOUCH) && (isNaN(this.distance) || this.distance < this.options.threshold));
+    },
+
+    validateLongTap: function() {
+        var options = this.options;
+        //slight threshold on moving finger
+        return ((this.duration > options.longTapThreshold) && (this.distance < TouchConst.DOUBLE_TAP_THRESHOLD)); // check double_tab_threshold where from
+    },
+
+    didTap: function() {
+        //Enure we dont return 0 or null for false values
+        return !!(this.validateTap() && this.hasTap());
+    },
+
+    didDoubleTap: function() {
+        //Enure we dont return 0 or null for false values
+        return !!(this.validateDoubleTap() && this.hasDoubleTap());
+    },
+
+    didLongTap: function() {
+        //Enure we dont return 0 or null for false values
+        return !!(this.validateLongTap() && this.hasLongTap());
+    },
+
+    startMultiFingerRelease: function(event) {
+        this.previousTouchEndTime = this.getTimeStamp();
+        this.fingerCountAtRelease = event.touches.length + 1;
+    },
+
+    cancelMultiFingerRelease: function() {
+        this.previousTouchEndTime = 0;
+        this.fingerCountAtRelease = 0;
+    },
+
+    inMultiFingerRelease: function() {
+        var withinThreshold = false;
+
+        if (this.previousTouchEndTime) {
+            var diff = this.getTimeStamp() - this.previousTouchEndTime;
+            if (diff <= this.options.fingerReleaseThreshold) {
+                withinThreshold = true;
+            }
+        }
+
+        return withinThreshold;
+    },
+
+    getTouchInProgress: function() {
+        var element = this.element;
+        //strict equality to ensure only true and false are returned
+        return (element.data('intouch') === true);
+    },
+
+    setTouchInProgress: function(val) {
+        var element = this.element;
+
+        //If destroy is called in an event handler, we have no el, and we have already cleaned up, so return.
+        if(!element) { return; }
+
+        //Add or remove event listeners depending on touch status
+        if (val === true) {
+            element.bind(this.MOVE_EV, $.proxy(this.touchMove, this));
+            element.bind(this.END_EV, $.proxy(this.touchEnd, this));
+
+            //we only have leave events on desktop, we manually calcuate leave on touch as its not supported in webkit
+            if (this.LEAVE_EV) {
+                element.bind(this.LEAVE_EV, $.proxy(this.touchLeave, this));
+            }
+        } else {
+
+            element.unbind(this.MOVE_EV, this.touchMove, false);
+            element.unbind(this.END_EV, this.touchEnd, false);
+
+            //we only have leave events on desktop, we manually calcuate leave on touch as its not supported in webkit
+            if (this.LEAVE_EV) {
+                element.unbind(this.LEAVE_EV, this.touchLeave, false);
+            }
+        }
+
+        //strict equality to ensure only true and false can update the value
+        element.data('intouch', val === true);
+    },
+
+    createFingerData: function(id, evt) {
+        var f = {
+            start: {
+                x: 0,
+                y: 0
+            },
+            last: {
+                x: 0,
+                y: 0
+            },
+            end: {
+                x: 0,
+                y: 0
+            }
+        };
+        f.start.x = f.last.x = f.end.x = evt.pageX || evt.clientX;
+        f.start.y = f.last.y = f.end.y = evt.pageY || evt.clientY;
+        this.fingerData[id] = f;
+        return f;
+    },
+
+    updateFingerData: function(evt) {
+        var id = evt.identifier !== undefined ? evt.identifier : 0;
+        var f = this.getFingerData(id);
+
+        if (f === null) {
+            f = this.createFingerData(id, evt);
+        }
+
+        f.last.x = f.end.x;
+        f.last.y = f.end.y;
+
+        f.end.x = evt.pageX || evt.clientX;
+        f.end.y = evt.pageY || evt.clientY;
+
+        return f;
+    },
+
+    getFingerData: function(id) {
+        return this.fingerData[id] || null;
+    },
+
+    setMaxDistance: function(direction, distance) {
+        if (direction === TouchConst.NONE) return;
+        distance = Math.max(distance, this.getMaxDistance(direction));
+        this.maximumsMap[direction].distance = distance;
+    },
+
+    getMaxDistance: function(direction) {
+        return (this.maximumsMap[direction]) ? this.maximumsMap[direction].distance : undefined;
+    },
+
+    createMaximumsData: function() {
+        var maxData = {};
+        maxData[TouchConst.LEFT] = this.createMaximumVO(TouchConst.LEFT);
+        maxData[TouchConst.RIGHT] = this.createMaximumVO(TouchConst.RIGHT);
+        maxData[TouchConst.UP] = this.createMaximumVO(TouchConst.UP);
+        maxData[TouchConst.DOWN] = this.createMaximumVO(TouchConst.DOWN);
+
+        return maxData;
+    },
+
+    createMaximumVO: function(dir) {
+        return {
+            direction: dir,
+            distance: 0
+        }
+    },
+
+    calculateDuration: function(){
+        return this.endTime - this.startTime;
+    },
+
+    calculateTouchesDistance: function(startPoint, endPoint){
+        var diffX = Math.abs(startPoint.x - endPoint.x);
+        var diffY = Math.abs(startPoint.y - endPoint.y);
+
+        return Math.round(Math.sqrt(diffX * diffX + diffY * diffY));
+    },
+
+    calculatePinchZoom: function(startDistance, endDistance){
+        var percent = (endDistance / startDistance) * 100; // 1 ? 100
+        return percent.toFixed(2);
+    },
+
+    calculatePinchDirection: function(){
+        if (this.pinchZoom < 1) {
+            return TouchConst.OUT;
+        } else {
+            return TouchConst.IN;
+        }
+    },
+
+    calculateDistance: function(startPoint, endPoint){
+        return Math.round(Math.sqrt(Math.pow(endPoint.x - startPoint.x, 2) + Math.pow(endPoint.y - startPoint.y, 2)));
+    },
+
+    calculateAngle: function(startPoint, endPoint){
+        var x = startPoint.x - endPoint.x;
+        var y = endPoint.y - startPoint.y;
+        var r = Math.atan2(y, x); //radians
+        var angle = Math.round(r * 180 / Math.PI); //degrees
+
+        //ensure value is positive
+        if (angle < 0) {
+            angle = 360 - Math.abs(angle);
+        }
+
+        return angle;
+    },
+
+    calculateDirection: function(startPoint, endPoint){
+        if( this.comparePoints(startPoint, endPoint) ) {
+            return TouchConst.NONE;
+        }
+
+        var angle = this.calculateAngle(startPoint, endPoint);
+
+        if ((angle <= 45) && (angle >= 0)) {
+            return TouchConst.LEFT;
+        } else if ((angle <= 360) && (angle >= 315)) {
+            return TouchConst.LEFT;
+        } else if ((angle >= 135) && (angle <= 225)) {
+            return TouchConst.RIGHT;
+        } else if ((angle > 45) && (angle < 135)) {
+            return TouchConst.DOWN;
+        } else {
+            return TouchConst.UP;
+        }
+    },
+
+    getTimeStamp: function(){
+        return (new Date()).getTime();
+    },
+
+    getBounds: function (el) {
+        el = $(el);
+        var offset = el.offset();
+
+        return {
+            left: offset.left,
+            right: offset.left + el.outerWidth(),
+            top: offset.top,
+            bottom: offset.top + el.outerHeight()
+        };
+    },
+
+    isInBounds: function(point, bounds){
+        return (point.x > bounds.left && point.x < bounds.right && point.y > bounds.top && point.y < bounds.bottom);
+    },
+
+    comparePoints: function(pointA, pointB) {
+        return (pointA.x === pointB.x && pointA.y === pointB.y);
+    },
+
+    removeListeners: function() {
+        var element = this.element;
+
+        element.unbind(this.START_EV, this.touchStart, this);
+        element.unbind(this.CANCEL_EV, this.touchCancel, this);
+        element.unbind(this.MOVE_EV, this.touchMove, this);
+        element.unbind(this.END_EV, this.touchEnd, this);
+
+        //we only have leave events on desktop, we manually calculate leave on touch as its not supported in webkit
+        if (this.LEAVE_EV) {
+            element.unbind(this.LEAVE_EV, this.touchLeave, this);
+        }
+
+        this.setTouchInProgress(false);
+    },
+
+    enable: function(){
+        this.disable();
+        this.element.bind(this.START_EV, this.touchStart);
+        this.element.bind(this.CANCEL_EV, this.touchCancel);
+        return this.element;
+    },
+
+    disable: function(){
+        this.removeListeners();
+        return this.element;
+    },
+
+    changeAttribute: function(attributeName){
+
+    },
+
+    destroy: function(){
+        this.removeListeners();
+    }
+};
+
+Metro['touch'] = TouchConst;
+Metro.plugin('touch', Touch);
+
 // Source: js/plugins/treeview.js
 var Treeview = {
     init: function( options, elem ) {
@@ -19987,7 +22600,7 @@ var Treeview = {
             that._recheck(this);
         });
 
-        Utils.exec(o.onTreeviewCreate, [element]);
+        Utils.exec(o.onTreeviewCreate, [element], element[0]);
     },
 
     _createIcon: function(data){
@@ -20257,7 +22870,9 @@ var Treeview = {
     },
 
     changeAttribute: function(attributeName){
-
+        switch (attributeName) {
+            default: console.log(attributeName);
+        }
     }
 };
 
@@ -21237,6 +23852,11 @@ var Window = {
         this.element = $(elem);
         this.win = null;
         this.overlay = null;
+        this.position = {
+            top: 0,
+            left: 0
+        };
+        this.hidden = false;
 
         this._setOptionsFromDOM();
         this._create();
@@ -21249,6 +23869,7 @@ var Window = {
     dependencies: ['draggable', 'resizeable'],
 
     options: {
+        hidden: false,
         width: "auto",
         height: "auto",
         btnClose: true,
@@ -21293,7 +23914,7 @@ var Window = {
     },
 
     _setOptionsFromDOM: function(){
-        var that = this, element = this.element, o = this.options;
+        var element = this.element, o = this.options;
 
         $.each(element.data(), function(key, value){
             if (key in o) {
@@ -21309,8 +23930,7 @@ var Window = {
     _create: function(){
         var that = this, element = this.element, o = this.options;
         var win, overlay;
-        var prev = element.prev();
-        var parent = element.parent();
+        var parent = o.dragArea === "parent" ? element.parent() : $(o.dragArea);
 
         if (o.modal === true) {
             o.btnMax = false;
@@ -21323,21 +23943,57 @@ var Window = {
         }
 
         win = this._window(o);
+        win.addClass("no-visible");
 
-        if (prev.length === 0) {
-            parent.prepend(win);
-        } else {
-            win.insertAfter(prev);
-        }
+        parent.append(win);
+
         if (o.overlay === true) {
             overlay = this._overlay();
             overlay.appendTo(win.parent());
             this.overlay = overlay;
         }
 
-        Utils.exec(o.onShow, [win]);
-
         this.win = win;
+
+        setTimeout(function(){
+            that._setPosition();
+
+            if (o.hidden !== true) {
+                that.win.removeClass("no-visible");
+            }
+            Utils.exec(o.onShow, [win], win[0]);
+        }, 100);
+    },
+
+    _setPosition: function(){
+        var o = this.options;
+        var win = this.win;
+        var parent = o.dragArea === "parent" ? win.parent() : $(o.dragArea);
+        var top_center = parent.height() / 2 - win[0].offsetHeight / 2;
+        var left_center = parent.width() / 2 - win[0].offsetWidth / 2;
+        var top, left, right, bottom;
+
+        if (o.place !== 'auto') {
+
+            switch (o.place.toLowerCase()) {
+                case "top-left": top = 0; left = 0; right = "auto"; bottom = "auto"; break;
+                case "top-center": top = 0; left = left_center; right = "auto"; bottom = "auto"; break;
+                case "top-right": top = 0; right = 0; left = "auto"; bottom = "auto"; break;
+                case "right-center": top = top_center; right = 0; left = "auto"; bottom = "auto"; break;
+                case "bottom-right": bottom = 0; right = 0; left = "auto"; top = "auto"; break;
+                case "bottom-center": bottom = 0; left = left_center; right = "auto"; top = "auto"; break;
+                case "bottom-left": bottom = 0; left = 0; right = "auto"; top = "auto"; break;
+                case "left-center": top = top_center; left = 0; right = "auto"; bottom = "auto"; break;
+                default: top = top_center; left = left_center; bottom = "auto"; right = "auto";
+            }
+
+            win.css({
+                top: top,
+                left: left,
+                bottom: bottom,
+                right: right
+            });
+        }
     },
 
     _window: function(o){
@@ -21459,11 +24115,6 @@ var Window = {
             })
         }
 
-
-        if (o.place !== 'auto') {
-            win.addClass("pos-" + o.place);
-        }
-
         win.addClass(o.clsWindow);
         caption.addClass(o.clsCaption);
         content.addClass(o.clsContent);
@@ -21472,7 +24123,7 @@ var Window = {
     },
 
     _overlay: function(){
-        var that = this, win = this.win,  element = this.element, o = this.options;
+        var o = this.options;
 
         var overlay = $("<div>");
         overlay.addClass("overlay");
@@ -21489,7 +24140,7 @@ var Window = {
     },
 
     maximized: function(e){
-        var that = this, win = this.win,  element = this.element, o = this.options;
+        var win = this.win,  o = this.options;
         var target = $(e.currentTarget);
         win.toggleClass("maximized");
         if (target.hasClass("window-caption")) {
@@ -21499,13 +24150,13 @@ var Window = {
         }
     },
 
-    minimized: function(e){
-        var that = this, win = this.win,  element = this.element, o = this.options;
+    minimized: function(){
+        var win = this.win,  element = this.element, o = this.options;
         win.toggleClass("minimized");
         Utils.exec(o.onMinClick, [win], element[0]);
     },
 
-    close: function(e){
+    close: function(){
         var that = this, win = this.win,  element = this.element, o = this.options;
         var timer = null;
 
@@ -21538,13 +24189,18 @@ var Window = {
     },
 
     hide: function(){
-        this.win.addClass("no-visible");
+        this.win.css({
+            display: "none"
+        });
     },
     show: function(){
         this.win.removeClass("no-visible");
+        this.win.css({
+            display: "flex"
+        });
     },
     toggle: function(){
-        if (this.win.hasClass("no-visible")) {
+        if (this.win.css("display") === "none" || this.win.hasClass("no-visible")) {
             this.show();
         } else {
             this.hide();
@@ -21561,7 +24217,7 @@ var Window = {
     },
 
     toggleButtons: function(a) {
-        var that = this, element = this.element, win = this.win, o = this.options;
+        var win = this.win;
         var btnClose = win.find(".btn-close");
         var btnMin = win.find(".btn-min");
         var btnMax = win.find(".btn-max");
@@ -21578,7 +24234,7 @@ var Window = {
     },
 
     changeSize: function(a){
-        var that = this, element = this.element, win = this.win, o = this.options;
+        var element = this.element, win = this.win;
         if (a === "data-width") {
             win.css("width", element.data("width"));
         }
@@ -21588,7 +24244,7 @@ var Window = {
     },
 
     changeClass: function(a){
-        var that = this, element = this.element, win = this.win, o = this.options;
+        var element = this.element, win = this.win, o = this.options;
         if (a === "data-cls-window") {
             win[0].className = "window " + (o.resizable ? " resizeable " : " ") + element.attr("data-cls-window");
         }
@@ -21601,7 +24257,7 @@ var Window = {
     },
 
     toggleShadow: function(){
-        var that = this, element = this.element, win = this.win, o = this.options;
+        var element = this.element, win = this.win;
         var flag = JSON.parse(element.attr("data-shadow"));
         if (flag === true) {
             win.addClass("win-shadow");
@@ -21611,7 +24267,7 @@ var Window = {
     },
 
     setContent: function(){
-        var that = this, element = this.element, win = this.win, o = this.options;
+        var element = this.element, win = this.win;
         var content = element.attr("data-content");
         var result;
 
@@ -21627,29 +24283,27 @@ var Window = {
     },
 
     setTitle: function(){
-        var that = this, element = this.element, win = this.win, o = this.options;
+        var element = this.element, win = this.win;
         var title = element.attr("data-title");
         win.find(".window-caption .title").html(title);
     },
 
     setIcon: function(){
-        var that = this, element = this.element, win = this.win, o = this.options;
+        var element = this.element, win = this.win;
         var icon = element.attr("data-icon");
         win.find(".window-caption .icon").html(icon);
     },
 
     getIcon: function(){
-        var that = this, element = this.element, win = this.win, o = this.options;
-        return win.find(".window-caption .icon").html();
+        return this.win.find(".window-caption .icon").html();
     },
 
     getTitle: function(){
-        var that = this, element = this.element, win = this.win, o = this.options;
-        return win.find(".window-caption .title").html();
+        return this.win.find(".window-caption .title").html();
     },
 
     toggleDraggable: function(){
-        var that = this, element = this.element, win = this.win, o = this.options;
+        var element = this.element, win = this.win;
         var flag = JSON.parse(element.attr("data-draggable"));
         var drag = win.data("draggable");
         if (flag === true) {
@@ -21660,7 +24314,7 @@ var Window = {
     },
 
     toggleResizable: function(){
-        var that = this, element = this.element, win = this.win, o = this.options;
+        var element = this.element, win = this.win;
         var flag = JSON.parse(element.attr("data-resizable"));
         var resize = win.data("resizable");
         if (flag === true) {
@@ -21673,7 +24327,7 @@ var Window = {
     },
 
     changeTopLeft: function(a){
-        var that = this, element = this.element, win = this.win, o = this.options;
+        var element = this.element, win = this.win;
         var pos;
         if (a === "data-top") {
             pos = parseInt(element.attr("data-top"));
@@ -21691,8 +24345,8 @@ var Window = {
         }
     },
 
-    changePlace: function (a) {
-        var that = this, element = this.element, win = this.win, o = this.options;
+    changePlace: function () {
+        var element = this.element, win = this.win;
         var place = element.attr("data-place");
         win.addClass(place);
     },

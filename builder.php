@@ -17,6 +17,8 @@ function ReturnJSON($result = true, $message = "OK", $data = array()){
 }
 
 $data = $_POST['item'];
+$custom_less = isset($_POST['custom_less']) ? "\n\n".$_POST['custom_less'] : "";
+$custom_js = isset($_POST['custom_js']) ? "\n\n".$_POST['custom_js'] : "";
 $minified = isset($_POST['minified']);
 $source_map = $minified && isset($_POST['source_map']);
 
@@ -209,6 +211,8 @@ if (count($less) > 0) {
 
     $less_complete_file_content = str_replace($less_replace_array, "", $less_complete_file_content);
     $less_complete_file_content = str_replace("'less/", "'".LESS_DIR, $less_complete_file_content);
+
+    $less_complete_file_content .= $custom_less;
 }
 
 if (count($js) > 0) {
@@ -225,6 +229,7 @@ if (count($js) > 0) {
     }
 
     $js_complete_file_content .= $js_foot;
+    $js_complete_file_content .= $custom_js;
 }
 
 $less_temp_file = TEMP_DIR . $less_complete_file_name;

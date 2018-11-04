@@ -1,8 +1,8 @@
 {
   "author": "Sergey Pimenov",
   "name": "metro4-builder",
-  "version": "4.2.26",
-  "build": "704",
+  "version": "4.2.27",
+  "build": "705",
   "version_suffix": "",
   "description": "Metro 4 Builder",
   "keywords": [

@@ -378,9 +378,13 @@
                 "less": ["hint"],
                 "js": ["plugins/hint"]
             },
-            "head_bar_css": {
+            "head_bar_comp": {
                 "name": "Head bar",
                 "less": ["head-bar"]
+            },
+            "html_container_comp": {
+                "name": "HTML container",
+                "js": ["plugins/html-container"]
             },
             "image_compare_comp":{
                 "name": "Image compare",

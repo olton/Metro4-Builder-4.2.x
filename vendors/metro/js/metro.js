@@ -1,5 +1,5 @@
 /*
- * Metro 4 Components Library v4.2.26 build 704 (https://metroui.org.ua)
+ * Metro 4 Components Library v4.2.27 build 705 (https://metroui.org.ua)
  * Copyright 2018 Sergey Pimenov
  * Licensed under MIT
  */
@@ -34,6 +34,8 @@ var meta_animation_duration = $("meta[name='metro4:animation_duration']").attr("
 var meta_callback_timeout = $("meta[name='metro4:callback_timeout']").attr("content");
 var meta_timeout = $("meta[name='metro4:timeout']").attr("content");
 var meta_scroll_multiple = $("meta[name='metro4:scroll_multiple']").attr("content");
+var meta_cloak = $("meta[name='metro4:cloak']").attr("content"); //default or fade
+var meta_cloak_duration = $("meta[name='metro4:cloak_duration']").attr("content"); //100
 
 if (window.METRO_INIT === undefined) {
     window.METRO_INIT = meta_init !== undefined ? JSON.parse(meta_init) : true;
@@ -64,6 +66,12 @@ if (window.METRO_TIMEOUT === undefined) {
 if (window.METRO_SCROLL_MULTIPLE === undefined) {
     window.METRO_SCROLL_MULTIPLE = meta_scroll_multiple !== undefined ? parseInt(meta_scroll_multiple) : 20;
 }
+if (window.METRO_CLOAK_REMOVE === undefined) {
+    window.METRO_CLOAK_REMOVE = meta_cloak !== undefined ? (""+meta_cloak).toLowerCase() : "fade";
+}
+if (window.METRO_CLOAK_DURATION === undefined) {
+    window.METRO_CLOAK_DURATION = meta_cloak_duration !== undefined ? parseInt(meta_cloak_duration) : 500;
+}
 if (window.METRO_HOTKEYS_FILTER_CONTENT_EDITABLE === undefined) {window.METRO_HOTKEYS_FILTER_CONTENT_EDITABLE = true;}
 if (window.METRO_HOTKEYS_FILTER_INPUT_ACCEPTING_ELEMENTS === undefined) {window.METRO_HOTKEYS_FILTER_INPUT_ACCEPTING_ELEMENTS = true;}
 if (window.METRO_HOTKEYS_FILTER_TEXT_INPUTS === undefined) {window.METRO_HOTKEYS_FILTER_TEXT_INPUTS = true;}
@@ -92,8 +100,8 @@ var isTouch = (('ontouchstart' in window) || (navigator.MaxTouchPoints > 0) || (
 
 var Metro = {
 
-    version: "4.2.26",
-    versionFull: "4.2.26.704 ",
+    version: "4.2.27",
+    versionFull: "4.2.27.705 ",
     isTouchable: isTouch,
     fullScreenEnabled: document.fullscreenEnabled,
     sheet: null,
@@ -339,6 +347,14 @@ var Metro = {
         this.initWidgets(widgets);
 
         this.about(true);
+
+        if (METRO_CLOAK_REMOVE !== "fade") {
+            $(".m4-cloak").removeClass("m4-cloak");
+        } else {
+            $(".m4-cloak").fadeIn(METRO_CLOAK_DURATION, function(){
+                $(".m4-cloak").removeClass("m4-cloak");
+            });
+        }
 
         return this;
     },
@@ -3440,6 +3456,10 @@ var Utils = {
             return false;
         }
 
+        if (typeof o === "number" && t.toLowerCase() !== "number") {
+            return false;
+        }
+
         var ns = o.split(".");
         var i, context = window;
 
@@ -3666,6 +3686,15 @@ var d = new Date().getTime();
 
     objectDelete: function(obj, key){
         if (obj[key] !== undefined) delete obj[key];
+    },
+
+    arrayDeleteByMultipleKeys: function(arr, keys){
+        keys.forEach(function(ind){
+            delete arr[ind];
+        });
+        return arr.filter(function(item){
+            return item !== undefined;
+        })
     },
 
     arrayDelete: function(arr, val){
@@ -4546,7 +4575,7 @@ var AppBar = {
         menu = element.find(".app-bar-menu");
 
         if (menu.length === 0) {
-            hamburger.hide();
+            hamburger.css("display", "none");
         } else {
             Utils.addCssRule(Metro.sheet, ".app-bar-menu li", "list-style: none!important;"); // This special for IE11 and Edge
         }
@@ -4564,9 +4593,11 @@ var AppBar = {
 
         if (o.expand === true) {
             element.addClass("app-bar-expand");
+            hamburger.addClass("hidden");
         } else {
             if (Utils.isValue(o.expandPoint) && Utils.mediaExist(o.expandPoint)) {
                 element.addClass("app-bar-expand");
+                hamburger.addClass("hidden");
             }
         }
     },
@@ -9396,7 +9427,7 @@ var Dialog = {
         var timeout = 0;
         if (o.onHide !== Metro.noop) {
             timeout = 300;
-            Utils.exec(o.onHide, [element]);
+            Utils.exec(o.onHide, [element], element[0]);
         }
         setTimeout(function(){
             element.css({
@@ -9414,14 +9445,17 @@ var Dialog = {
             visibility: "visible"
         });
         Utils.callback(callback);
-        Utils.exec(o.onShow, [element]);
+        Utils.exec(o.onShow, [element], element[0]);
     },
 
     setPosition: function(){
         var element = this.element, o = this.options;
-        var top, left, bottom;
+        var top, bottom;
         if (o.toTop !== true && o.toBottom !== true) {
             top = ( $(window).height() - element.outerHeight() ) / 2;
+            if (top < 0) {
+                top = 0;
+            }
             bottom = "auto";
         } else {
             if (o.toTop === true) {
@@ -9473,13 +9507,12 @@ var Dialog = {
         var that = this, element = this.element, o = this.options;
 
         if (!Utils.bool(o.leaveOverlayOnClose)) {
-            console.log("ku");
             $('body').find('.overlay').remove();
         }
 
         this.hide(function(){
             element.data("open", false);
-            Utils.exec(o.onClose, [element]);
+            Utils.exec(o.onClose, [element], element[0]);
             if (o.removeOnClose === true) {
                 element.remove();
             }
@@ -9499,7 +9532,7 @@ var Dialog = {
         }
 
         this.show(function(){
-            Utils.exec(o.onOpen, [element]);
+            Utils.exec(o.onOpen, [element], element[0]);
             element.data("open", true);
             if (parseInt(o.autoHide) > 0) {
                 setTimeout(function(){
@@ -9949,6 +9982,11 @@ var Dropdown = {
         toggle = o.toggleElement !== null ? $(o.toggleElement) : element.siblings('.dropdown-toggle').length > 0 ? element.siblings('.dropdown-toggle') : element.prev();
 
         this.displayOrigin = element.css("display");
+
+        if (element.hasClass("v-menu")) {
+            element.addClass("for-dropdown");
+        }
+
         element.css("display", "none");
 
         if (element_roles.length === 0 || element_roles.indexOf("dropdown") === -1) {
@@ -11542,6 +11580,7 @@ var Input = {
         onClearClick: Metro.noop,
         onRevealClick: Metro.noop,
         onSearchButtonClick: Metro.noop,
+        onEnterClick: Metro.noop,
         onInputCreate: Metro.noop
     },
 
@@ -11758,6 +11797,12 @@ var Input = {
                     that.historyIndex = that.history.length - 1;
                 }
                 e.preventDefault();
+            }
+        });
+
+        element.on(Metro.events.keydown, function(e){
+            if (e.keyCode === Metro.keyCode.ENTER) {
+                Utils.exec(o.onEnterClick, [element.val()], element[0]);
             }
         });
 
@@ -12854,9 +12899,9 @@ var List = {
     },
 
     _getItemContent: function(item){
-        var o = this.options;
+        var o = this.options, $item = $(item);
         var i, inset, data;
-        var format;
+        var format, formatMask = Utils.isValue($item.data("formatMask")) ? $item.data("formatMask") : null;
 
         if (Utils.isValue(o.sortClass)) {
             data = "";
@@ -12875,20 +12920,43 @@ var List = {
 
         if (Utils.isValue(format)) {
 
-            if (['number', 'int', 'float', 'money'].indexOf(format) !== -1 && (o.thousandSeparator !== "," || o.decimalSeparator !== "." )) {
+            if (['number', 'int', 'integer', 'float', 'money'].indexOf(format) !== -1 && (o.thousandSeparator !== "," || o.decimalSeparator !== "." )) {
                 data = Utils.parseNumber(data, o.thousandSeparator, o.decimalSeparator);
             }
 
             switch (format) {
-                case "date": data = Utils.isDate(data) ? new Date(data) : ""; break;
+                case "date": data = Utils.isValue(formatMask) ? data.toDate(formatMask) : new Date(data); break;
                 case "number": data = Number(data); break;
-                case "int": data = parseInt(data); break;
+                case "int":
+                case "integer": data = parseInt(data); break;
                 case "float": data = parseFloat(data); break;
                 case "money": data = Utils.parseMoney(data); break;
             }
         }
 
         return data;
+    },
+
+    deleteItem: function(value){
+        var i, deleteIndexes = [], item;
+
+        for (i = 0; i < this.items.length; i++) {
+            item = this.items[i];
+
+            if (Utils.isFunc(value)) {
+                if (Utils.exec(value, [item])) {
+                    deleteIndexes.push(i);
+                }
+            } else {
+                if (item.textContent.contains(value)) {
+                    deleteIndexes.push(i);
+                }
+            }
+        }
+
+        this.items = Utils.arrayDeleteByMultipleKeys(this.items, deleteIndexes);
+
+        return this;
     },
 
     draw: function(){
@@ -14284,9 +14352,12 @@ var Popover = {
         popoverTrigger: Metro.popoverEvents.HOVER,
         popoverPosition: Metro.position.TOP,
         hideOnLeave: false,
+        closeButton: true,
         clsPopover: "",
+        clsPopoverContent: "",
         onPopoverShow: Metro.noop,
-        onPopoverHide: Metro.noop
+        onPopoverHide: Metro.noop,
+        onPopoverCreate: Metro.noop
     },
 
     _setOptionsFromDOM: function(){
@@ -14334,7 +14405,7 @@ var Popover = {
             }, o.popoverTimeout);
         });
 
-        if (o.hideOnLeave === true && !Utils.isTouchDevice()) {
+        if (o.hideOnLeave === true) {
             element.on(Metro.events.leave, function(){
                 that.removePopover();
             });
@@ -14386,9 +14457,14 @@ var Popover = {
             return ;
         }
 
-        popover = $("<div>").addClass("popover neb").addClass(o.clsPopover).html(o.popoverText);
-
+        popover = $("<div>").addClass("popover neb").addClass(o.clsPopover);
         popover.attr("id", id);
+
+        $("<div>").addClass("popover-content").addClass(o.clsPopoverContent).html(o.popoverText).appendTo(popover);
+
+        if (o.popoverHide === 0 && o.closeButton === true) {
+            $("<button>").addClass("button square small popover-close-button bg-white").html("&times;").appendTo(popover);
+        }
 
         switch (o.popoverPosition) {
             case Metro.position.TOP: neb_pos = "neb-s"; break;
@@ -14417,33 +14493,40 @@ var Popover = {
 
         this.popovered = true;
 
-        Utils.exec(o.onPopoverShow, [popover, element]);
+        Utils.exec(o.onPopoverCreate, [popover], element[0]);
     },
 
     removePopover: function(){
         var that = this;
         var timeout = this.options.onPopoverHide === Metro.noop ? 0 : 300;
         var popover = this.popover;
-        if (popover !== null) {
-            Utils.exec(this.options.onPopoverHide, [popover, this.element]);
-            setTimeout(function(){
-                popover.hide(0, function(){
-                    popover.remove();
-                    that.popover = null;
-                    that.popovered = false;
-                });
-            }, timeout);
+
+        if (!popovered) {
+            return ;
         }
+
+        Utils.exec(this.options.onPopoverHide, [popover], this.elem);
+
+        setTimeout(function(){
+            popover.hide(0, function(){
+                popover.remove();
+                that.popover = null;
+                that.popovered = false;
+            });
+        }, timeout);
     },
 
     show: function(){
-        var that = this, o = this.options;
+        var that = this, element = this.element, o = this.options;
         if (this.popovered === true) {
             return ;
         }
 
         setTimeout(function(){
             that.createPopover();
+
+            Utils.exec(o.onPopoverShow, [popover], element[0]);
+
             if (o.popoverHide > 0) {
                 setTimeout(function(){
                     that.removePopover();
@@ -14456,17 +14539,23 @@ var Popover = {
         this.removePopover();
     },
 
-    changeText: function(){
-        this.options.popoverText = this.element.attr("data-popover-text");
-    },
-
-    changePosition: function(){
-        this.options.popoverPosition = this.element.attr("data-popover-position");
-    },
-
     changeAttribute: function(attributeName){
+        var that = this, element = this.element, o = this.options;
+
+        var changeText = function(){
+            o.popoverText = element.attr("data-popover-text");
+            this.popover.find(".popover-content").html(o.popoverText);
+            that.setPosition();
+        };
+
+        var changePosition = function(){
+            o.popoverPosition = element.attr("data-popover-position");
+            that.setPosition();
+        };
+
         switch (attributeName) {
-            case "data-popover-text": this.changeText(); break;
+            case "data-popover-text": changeText(); break;
+            case "data-popover-position": changePosition(); break;
         }
     }
 };
@@ -15592,22 +15681,22 @@ var Select = {
         var filter_input = drop_container.find("input");
         var list = drop_container.find("ul");
 
-        element.on(Metro.events.focus, function(){
-            container.addClass("focused");
-        });
-
-        element.on(Metro.events.blur, function(){
-            container.removeClass("focused");
-        });
-
         container.on(Metro.events.click, function(e){
+            $(".focused").removeClass("focused");
+            container.addClass("focused");
             e.preventDefault();
             e.stopPropagation();
         });
 
-        input.on(Metro.events.click, function(){container.toggleClass("focused");});
-        filter_input.on(Metro.events.blur, function(){container.removeClass("focused");});
-        filter_input.on(Metro.events.focus, function(){container.addClass("focused");});
+        input.on(Metro.events.click, function(e){
+            $(".focused").removeClass("focused");
+            container.addClass("focused");
+            e.preventDefault();
+            e.stopPropagation();
+        });
+
+        // filter_input.on(Metro.events.blur, function(){container.removeClass("focused");});
+        // filter_input.on(Metro.events.focus, function(){container.addClass("focused");});
 
         list.on(Metro.events.click, "li", function(e){
             if ($(this).hasClass("group-title")) {
@@ -15852,6 +15941,7 @@ $(document).on(Metro.events.click, function(){
     $.each(selects, function(){
         $(this).data('dropdown').close();
     });
+    $(".select").removeClass("focused");
 });
 
 Metro.plugin('select', Select);
@@ -16917,6 +17007,13 @@ var Spinner = {
             }, threshold);
         };
 
+        spinner.on(Metro.events.click, function(e){
+            $(".focused").removeClass("focused");
+            spinner.addClass("focused");
+            e.preventDefault();
+            e.stopPropagation();
+        });
+
         spinner.on(Metro.events.start, ".spinner-button", function(){
             that.repeat_timer = true;
             spinnerButtonClick($(this).hasClass("spinner-button-plus"), o.repeatThreshold);
@@ -17025,12 +17122,20 @@ var Spinner = {
 
 Metro.plugin('spinner', Spinner);
 
+$(document).on(Metro.events.click, function(){
+    $(".spinner").removeClass("focused");
+});
+
+
+
 // Source: js/plugins/splitter.js
 var Splitter = {
     init: function( options, elem ) {
         this.options = $.extend( {}, this.options, options );
         this.elem  = elem;
         this.element = $(elem);
+        this.storage = Utils.isValue(Metro.storage) ? Metro.storage : null;
+        this.storageKey = "SPLITTER:";
 
         this._setOptionsFromDOM();
         this._create();
@@ -17044,7 +17149,8 @@ var Splitter = {
         gutterSize: 4,
         minSizes: null,
         children: "*",
-        gutterClick: "expand", // expand or collapse
+        gutterClick: "expand", // TODO expand or collapse
+        saveState: false,
         onResizeStart: Metro.noop,
         onResizeStop: Metro.noop,
         onResizeSplit: Metro.noop,
@@ -17120,6 +17226,10 @@ var Splitter = {
                 });
             }
         }
+
+        if (o.saveState && this.storage !== null) {
+            this._getSize();
+        }
     },
 
     _createEvents: function(){
@@ -17158,6 +17268,8 @@ var Splitter = {
 
             $(window).on(Metro.events.stop + "-" + element.attr("id"), function(e){
 
+                that._saveSize();
+
                 gutter.removeClass("active");
 
                 $(window).off(Metro.events.move + "-" + element.attr("id"));
@@ -17166,6 +17278,40 @@ var Splitter = {
                 Utils.exec(o.onResizeStop, [Utils.getCursorPosition(element, e), gutter, prev_block, next_block], element);
             })
         });
+    },
+
+    _saveSize: function(){
+        var that = this, element = this.element, o = this.options;
+        var storage = this.storage, itemsSize = [];
+
+        if (o.saveState === true && storage !== null) {
+
+            $.each(element.children(".split-block"), function(){
+                var item = $(this);
+                itemsSize.push(item.css("flex-basis"));
+            });
+
+            storage.setItem(this.storageKey + element.attr("id"), itemsSize);
+        }
+
+    },
+
+    _getSize: function(){
+        var that = this, element = this.element, o = this.options;
+        var storage = this.storage, itemsSize = [];
+
+        if (o.saveState === true && storage !== null) {
+
+            itemsSize = storage.getItem(this.storageKey + element.attr("id"));
+
+            console.log(this.storageKey + element.attr("id"));
+            console.log(itemsSize);
+
+            $.each(element.children(".split-block"), function(i, v){
+                var item = $(v);
+                if (Utils.isValue(itemsSize) && Utils.isValue(itemsSize[i])) item.css("flex-basis", itemsSize[i]);
+            });
+        }
     },
 
     changeAttribute: function(attributeName){
@@ -18917,7 +19063,7 @@ var Table = {
             Utils.exec(o.onCheckClickAll, [status], this);
         });
 
-        var _search = function(e){
+        var _search = function(){
             that.searchString = this.value.trim().toLowerCase();
 
             clearInterval(that.input_interval); that.input_interval = false;
@@ -19098,7 +19244,7 @@ var Table = {
             that.openInspector(false);
         });
 
-        inspector.on(Metro.events.click, ".js-table-inspector-reset", function(e){
+        inspector.on(Metro.events.click, ".js-table-inspector-reset", function(){
             that.resetView();
         });
     },
@@ -19450,12 +19596,9 @@ var Table = {
     },
 
     _getItemContent: function(row){
-
-        // console.log(this.sort);
-
         var result, col = row[this.sort.colIndex];
         var format = this.heads[this.sort.colIndex].format;
-        var formatMask = this.heads[this.sort.colIndex].formatMask;
+        var formatMask = Utils.isValue(this.heads[this.sort.colIndex].formatMask) ? this.heads[this.sort.colIndex].formatMask : "%Y-%m-%d";
         var o = this.options;
 
         result = (""+col).toLowerCase().replace(/[\n\r]+|[\s]{2,}/g, ' ').trim();
@@ -19478,8 +19621,55 @@ var Table = {
         return result;
     },
 
+    deleteItem: function(fieldIndex, value){
+        var i, deleteIndexes = [];
+        for(i = 0; i < this.items.length; i++) {
+            if (Utils.isFunc(value)) {
+                if (Utils.exec(value, [this.items[i][fieldIndex]])) {
+                    deleteIndexes.push(i);
+                }
+            } else {
+                if (this.items[i][fieldIndex] === value) {
+                    deleteIndexes.push(i);
+                }
+            }
+        }
+
+        this.items = Utils.arrayDeleteByMultipleKeys(this.items, deleteIndexes);
+
+        return this;
+    },
+
+    deleteItemByName: function(fieldName, value){
+        var i, fieldIndex, deleteIndexes = [];
+
+        for(i = 0; i < this.heads.length; i++) {
+            if (this.heads[i]['name'] === fieldName) {
+                fieldIndex = i;
+                break;
+            }
+        }
+
+        for(i = 0; i < this.items.length; i++) {
+            if (Utils.isFunc(value)) {
+                if (Utils.exec(value, [this.items[i][fieldIndex]])) {
+                    deleteIndexes.push(i);
+                }
+            } else {
+                if (this.items[i][fieldIndex] === value) {
+                    deleteIndexes.push(i);
+                }
+            }
+        }
+
+        this.items = Utils.arrayDeleteByMultipleKeys(this.items, deleteIndexes);
+
+        return this;
+    },
+
     draw: function(){
-        return this._draw();
+        this._draw();
+        return this;
     },
 
     sorting: function(dir){
@@ -19511,60 +19701,96 @@ var Table = {
         });
 
         Utils.exec(o.onSortStop, [this.items], element[0]);
+
+        return this;
     },
 
     search: function(val){
         this.searchString = val.trim().toLowerCase();
         this.currentPage = 1;
         this._draw();
+        return this;
+    },
+
+    _rebuild: function(review){
+        var that = this, element = this.element;
+        var need_sort = false, sortable_columns;
+
+        if (review === true) {
+            this.view = this._createView();
+        }
+
+        this._createTableHeader();
+        this._createTableBody();
+        this._createTableFooter();
+
+        if (this.heads.length > 0) $.each(this.heads, function(i){
+            var item = this;
+            if (!need_sort && ["asc", "desc"].indexOf(item.sortDir) > -1) {
+                need_sort = true;
+                that.sort.colIndex = i;
+                that.sort.dir = item.sortDir;
+            }
+        });
+
+        if (need_sort) {
+            sortable_columns = element.find(".sortable-column");
+            this._resetSortClass(sortable_columns);
+            $(sortable_columns.get(that.sort.colIndex)).addClass("sort-"+that.sort.dir);
+            this.sorting();
+        }
+
+        that.currentPage = 1;
+
+        that._draw();
+    },
+
+    setHeads: function(data){
+        this.heads = data;
+        return this;
+    },
+
+    setHeadItem: function(name, data){
+        var i, index;
+        for(i = 0; i < this.heads.length; i++) {
+            if (item.name === name) {
+                index = i;
+                break;
+            }
+        }
+        this.heads[index] = data;
+        return this;
+    },
+
+    setItems: function(data){
+        this.items = data;
+        return this;
+    },
+
+    setData: function(/*obj*/ data){
+        this.items = [];
+        this.heads = [];
+        this.foots = [];
+
+        this._createItemsFromJSON(data);
+
+        this._rebuild(true);
+
+        return this;
     },
 
     loadData: function(source, review){
         var that = this, element = this.element, o = this.options;
-        var need_sort = false;
-        var sortable_columns;
 
         if (!Utils.isValue(review)) {
             review = true;
-        }
-
-        function redraw(){
-
-            if (review === true) {
-                that.view = that._createView();
-            }
-
-            that._createTableHeader();
-            that._createTableBody();
-            that._createTableFooter();
-
-            if (that.heads.length > 0) $.each(that.heads, function(i){
-                var item = this;
-                if (!need_sort && ["asc", "desc"].indexOf(item.sortDir) > -1) {
-                    need_sort = true;
-                    that.sort.colIndex = i;
-                    that.sort.dir = item.sortDir;
-                }
-            });
-
-            if (need_sort) {
-                sortable_columns = element.find(".sortable-column");
-                that._resetSortClass(sortable_columns);
-                $(sortable_columns.get(that.sort.colIndex)).addClass("sort-"+that.sort.dir);
-                that.sorting();
-            }
-
-            that.currentPage = 1;
-
-            that._draw();
         }
 
         element.html("");
 
         if (!Utils.isValue(source)) {
 
-            // this._createItemsFromHTML();
-            redraw();
+            this._rebuild(review);
 
         } else {
             o.source = source;
@@ -19579,7 +19805,7 @@ var Table = {
 
                 that._createItemsFromJSON(data);
 
-                redraw();
+                that._rebuild(review);
 
                 Utils.exec(o.onDataLoaded, [o.source, data], element[0]);
             }).fail(function( jqXHR, textStatus, errorThrown) {
@@ -19600,6 +19826,7 @@ var Table = {
             return ;
         }
         this._draw();
+        return this;
     },
 
     prev: function(){
@@ -19610,18 +19837,21 @@ var Table = {
             return ;
         }
         this._draw();
+        return this;
     },
 
     first: function(){
         if (this.items.length === 0) return ;
         this.currentPage = 1;
         this._draw();
+        return this;
     },
 
     last: function(){
         if (this.items.length === 0) return ;
         this.currentPage = this.pagesCount;
         this._draw();
+        return this;
     },
 
     page: function(num){
@@ -19635,6 +19865,7 @@ var Table = {
 
         this.currentPage = num;
         this._draw();
+        return this;
     },
 
     addFilter: function(f, redraw){
@@ -19679,6 +19910,7 @@ var Table = {
             this.currentPage = 1;
             this.draw();
         }
+        return this;
     },
 
     getItems: function(){
@@ -20380,7 +20612,7 @@ var TagInput = {
         element[0].className = "";
 
         element.addClass("original-input");
-        input = $("<input type='text'>").addClass("input-wrapper");
+        input = $("<input type='text'>").addClass("input-wrapper").attr("size", 1);
         input.appendTo(container);
 
         if (Utils.isValue(values)) {
@@ -20403,6 +20635,10 @@ var TagInput = {
             container.removeClass("focused");
         });
 
+        input.on(Metro.events.inputchange, function(){
+            input.attr("size", Math.ceil(input.val().length / 2) + 2);
+        });
+
         input.on(Metro.events.keyup, function(e){
             var val = input.val().trim();
 
@@ -20414,6 +20650,7 @@ var TagInput = {
 
             input.val("");
             that._addTag(val.replace(",", ""));
+            input.attr("size", 1);
 
             if (e.keyCode === Metro.keyCode.ENTER) {
                 e.preventDefault();

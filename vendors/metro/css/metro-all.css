@@ -1,5 +1,5 @@
 /*
- * Metro 4 Components Library v4.2.26 build 704 (https://metroui.org.ua)
+ * Metro 4 Components Library v4.2.27 build 705 (https://metroui.org.ua)
  * Copyright 2018 Sergey Pimenov
  * Licensed under MIT
  */
@@ -214,6 +214,9 @@ img {
 }
 div {
   position: relative;
+}
+.m4-cloak {
+  display: none;
 }
 .transition {
   -webkit-transition: all 0.3s linear;
@@ -20154,39 +20157,10 @@ aside::after {
   font-size: 2rem;
   margin-top: 1.5rem;
 }
-.toolbar {
-  display: -webkit-inline-box;
-  display: -ms-inline-flexbox;
-  display: inline-flex;
-  position: relative;
-  padding: 0 0 0 0.5725rem;
-  top: 2px;
-  -webkit-box-orient: horizontal;
-  -webkit-box-direction: normal;
-      -ms-flex-flow: row;
-          flex-flow: row;
-}
-.toolbar.no-divider:before {
-  display: none;
-}
-.toolbar:before {
-  position: absolute;
-  content: "";
-  width: 0.325rem;
-  height: 100%;
-  left: 0;
-  background-color: rgba(69, 90, 100, 0.2);
-  cursor: move;
-}
-.toolbar.vertical {
-  -webkit-box-orient: vertical;
-  -webkit-box-direction: normal;
-      -ms-flex-flow: column;
-          flex-flow: column;
-}
 .tool-button {
   width: 2rem;
   height: 2rem;
+  line-height: 2rem;
   vertical-align: middle;
   display: inline-block;
   text-align: center;
@@ -20216,6 +20190,46 @@ aside::after {
   width: auto;
   padding-left: 0.5rem;
   padding-right: 0.5rem;
+}
+.toolbar {
+  display: -webkit-inline-box;
+  display: -ms-inline-flexbox;
+  display: inline-flex;
+  position: relative;
+  padding: 0 0 0 0.5725rem;
+  top: 2px;
+  -webkit-box-orient: horizontal;
+  -webkit-box-direction: normal;
+      -ms-flex-flow: row nowrap;
+          flex-flow: row nowrap;
+}
+.toolbar.no-divider::before {
+  display: none;
+}
+.toolbar::before {
+  position: absolute;
+  content: "";
+  width: 0.325rem;
+  height: 100%;
+  top: 0;
+  left: 0;
+  background-color: rgba(69, 90, 100, 0.2);
+  cursor: move;
+}
+.toolbar.vertical {
+  -webkit-box-orient: vertical;
+  -webkit-box-direction: normal;
+      -ms-flex-flow: column nowrap;
+          flex-flow: column nowrap;
+  padding: 0.5725rem 0 0 0;
+  width: 32px;
+}
+.toolbar.vertical::before {
+  width: 32px;
+  height: 0.325rem;
+}
+.toolbar.vertical .tool-button {
+  margin: 2px 0;
 }
 .dropdown-button,
 .split-button,
@@ -21480,6 +21494,14 @@ label {
   line-height: 1.25rem;
   white-space: nowrap;
 }
+.hidden-input {
+  width: 1px;
+  height: 1px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  opacity: 0;
+}
 .inline-form {
   display: -webkit-box;
   display: -ms-flexbox;
@@ -21656,6 +21678,15 @@ fieldset.disabled,
 input[type=search] {
   -webkit-appearance: none;
 }
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px white inset;
+  background-color: #ffffff !important;
+  -webkit-transition: background-color 5000s ease-in-out 0s;
+  transition: background-color 5000s ease-in-out 0s;
+}
 .select {
   display: -webkit-box;
   display: -ms-flexbox;
@@ -21760,7 +21791,7 @@ input[type=search] {
   -webkit-box-shadow: 0 0 0 3px rgba(228, 228, 228, 0.45);
           box-shadow: 0 0 0 3px rgba(228, 228, 228, 0.45);
 }
-.select.dropdown-toggle:before {
+.select.dropdown-toggle::before {
   margin-left: -0.9rem;
   left: 100%;
   top: 14px;
@@ -21854,6 +21885,41 @@ input[type=search] {
   -webkit-box-ordinal-group: 4;
       -ms-flex-order: 3;
           order: 3;
+}
+.select.input-large {
+  height: 50px;
+}
+.select.input-large .select-input {
+  height: 48px;
+  font-size: 1.3rem;
+  padding: 2px 10px;
+  line-height: 48px;
+}
+.select.input-large.multiple {
+  min-height: 50px;
+  height: auto;
+}
+.select.input-large.multiple .select-input {
+  height: auto;
+  min-height: 48px;
+}
+.select.input-large.dropdown-toggle::before {
+  top: 22px;
+}
+.select.input-large .selected-item {
+  margin: 2px 2px;
+  padding: 0 0 0 8px;
+  height: 36px;
+  line-height: 36px;
+}
+.select.input-large .selected-item .title {
+  font-size: 1.3rem;
+  line-height: 36px;
+}
+.select.input-large .selected-item .remover {
+  width: 35px;
+  height: 35px;
+  line-height: 35px;
 }
 .textarea,
 textarea {
@@ -22218,6 +22284,31 @@ textarea {
   cursor: pointer;
   background-color: #e4e4e4;
 }
+.tag-input.input-large {
+  min-height: 50px;
+}
+.tag-input.input-large .tag {
+  margin: 2px 2px;
+  padding: 0 0 0 8px;
+  height: 36px;
+  line-height: 36px;
+}
+.tag-input.input-large .tag .title {
+  font-size: 1.3rem;
+  line-height: 36px;
+}
+.tag-input.input-large .tag .remover {
+  width: 35px;
+  height: 35px;
+  line-height: 35px;
+}
+.tag-input.input-large input {
+  height: 48px;
+  font-size: 1.3rem;
+  padding: 0 10px;
+  line-height: 48px;
+  min-width: 5em;
+}
 .spinner {
   display: -webkit-box;
   display: -ms-flexbox;
@@ -22308,6 +22399,19 @@ textarea {
   -webkit-box-ordinal-group: 2;
       -ms-flex-order: 1;
           order: 1;
+}
+.spinner.input-large {
+  height: 50px;
+  line-height: 50px;
+}
+.spinner.input-large input {
+  font-size: 1.3rem;
+}
+.spinner.input-large .spinner-button {
+  height: 48px;
+  width: 48px;
+  min-width: 48px;
+  line-height: 48px;
 }
 .checkbox {
   display: -webkit-inline-box;
@@ -22990,7 +23094,6 @@ textarea {
   text-decoration: none;
   vertical-align: middle;
   white-space: nowrap;
-  min-width: 12.5rem;
   border: none;
 }
 .d-menu li a img,
@@ -23004,7 +23107,8 @@ textarea {
   text-decoration: none;
   font-size: 1.2rem;
   left: 0.5rem;
-  top: 0.8rem;
+  top: 50%;
+  margin-top: -0.6rem;
   width: 1.2rem;
   height: 1.2rem;
   color: inherit;
@@ -23042,7 +23146,7 @@ textarea {
 }
 .d-menu li a[data-hotkey],
 .v-menu li a[data-hotkey] {
-  padding-right: 3.2rem;
+  padding-right: 4rem;
 }
 .d-menu li a[data-hotkey]::after,
 .v-menu li a[data-hotkey]::after {
@@ -23099,13 +23203,17 @@ textarea {
   width: 0.92rem;
   height: 0.92rem;
   font-size: 0.92rem;
-  margin-top: -0.3rem;
 }
 .v-menu {
   display: block;
   position: relative;
   width: 100%;
   float: none;
+}
+.v-menu.for-dropdown {
+  width: auto;
+  float: left;
+  display: none;
 }
 .v-menu .v-menu {
   display: none;
@@ -23621,7 +23729,7 @@ figure img {
   right: 0;
   bottom: 0;
   background-color: rgba(255, 255, 255, 0.5);
-  z-index: 1049;
+  z-index: 1040;
 }
 .overlay.transparent {
   background-color: rgba(255, 255, 255, 0);
@@ -29919,6 +30027,18 @@ html.metro-touch-device .streamer .stream.focused .stream-icon {
 }
 .popover > * {
   max-width: 100%;
+}
+.popover .popover-content {
+  display: block;
+  position: relative;
+  z-index: 50;
+}
+.popover .popover-close-button {
+  z-index: 100;
+  position: absolute;
+  top: 0;
+  right: 0;
+  font-size: 24px;
 }
 .media-player {
   display: block;
@@ -39575,7 +39695,7 @@ video:-webkit-full-screen {
   width: 100%;
   height: auto;
   min-height: 52px;
-  z-index: 1080;
+  z-index: 1030;
   background-color: #f8f8f8;
   -webkit-box-orient: horizontal;
   -webkit-box-direction: normal;
@@ -39669,16 +39789,16 @@ video:-webkit-full-screen {
   position: relative;
 }
 .app-bar .brand:not(.no-hover):hover,
-.app-bar .app-bar-menu li:hover,
-.app-bar .hamburger:hover,
+.app-bar .app-bar-menu li:not(.no-hover):hover,
+.app-bar .hamburger:not(.no-hover):hover,
 .app-bar .app-bar-item:not(.no-hover):hover,
 .app-bar .brand:not(.no-hover):active,
-.app-bar .app-bar-menu li:active,
-.app-bar .hamburger:active,
+.app-bar .app-bar-menu li:not(.no-hover):active,
+.app-bar .hamburger:not(.no-hover):active,
 .app-bar .app-bar-item:not(.no-hover):active,
 .app-bar .brand:not(.no-hover) .active,
-.app-bar .app-bar-menu li .active,
-.app-bar .hamburger .active,
+.app-bar .app-bar-menu li:not(.no-hover) .active,
+.app-bar .hamburger:not(.no-hover) .active,
 .app-bar .app-bar-item:not(.no-hover) .active {
   background: rgba(29, 29, 29, 0.1);
 }
@@ -41345,13 +41465,22 @@ video:-webkit-full-screen {
   background-color: rgba(255, 255, 255, 0.3) !important;
 }
 .bg-facebook {
-  background-color: #60b5f0;
+  background-color: #4267b2;
 }
 .bg-twitter {
-  background-color: #4464a2;
+  background-color: #1DA1F2;
 }
 .bg-github {
-  background-color: #7B7E8C;
+  background-color: #24292e;
+}
+.bg-bootstrap {
+  background-color: #563d7c;
+}
+.bg-gitlab {
+  background-color: #e65328;
+}
+.bg-amazon {
+  background-color: #232f3e;
 }
 .bd-default {
   border-color: #dfdfdf !important;

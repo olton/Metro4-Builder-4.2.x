@@ -46,6 +46,10 @@
                 "name": "Display",
                 "less": ["display"]
             },
+            "drop_css": {
+                "name": "Drop utils",
+                "less": ["drop-utils"]
+            },
             "embed_css": {
                 "name": "Embed objects",
                 "less": ["embed"]
@@ -192,12 +196,8 @@
                 "name": "Scroll events",
                 "js": ["utils/scroll-events"]
             },
-            "session_storage_js":{
-                "name": "Session storage",
-                "js": ["utils/session-storage"]
-            },
             "storage_js":{
-                "name": "Storage",
+                "name": "Storage &amp; Session storage",
                 "js": ["utils/storage"]
             },
             "tpl_js":{
@@ -271,7 +271,7 @@
                         "utils/i18n", "plugins/calendar"
                     ],
                     "less": [
-                        "calendar"
+                        "inputs", "inputs", "calendar"
                     ]
                 }
             },
@@ -282,7 +282,12 @@
             "carousel_comp":{
                 "name": "Carousel",
                 "less": ["carousel"],
-                "js": ["plugins/carousel"]
+                "js": ["plugins/carousel"],
+                "dependencies": {
+                    "js": [
+                        "utils/animation"
+                    ]
+                }
             },
             "charms_comp":{
                 "name": "Charms",
@@ -332,6 +337,9 @@
                 "dependencies": {
                     "js": [
                         "utils/i18n"
+                    ],
+                    "less": [
+                        "wheelpicker"
                     ]
                 }
             },
@@ -362,7 +370,12 @@
             "file_comp":{
                 "name": "File",
                 "less": ["file"],
-                "js": ["plugins/file"]
+                "js": ["plugins/file"],
+                "dependencies": {
+                    "less": [
+                        "inputs"
+                    ]
+                }
             },
             "gravatar_comp":{
                 "name": "Gravatar",
@@ -386,6 +399,10 @@
                 "name": "HTML container",
                 "js": ["plugins/html-container"]
             },
+            "h_menu_comp": {
+                "name": "H-menu",
+                "less": ["h-menu"]
+            },
             "image_compare_comp":{
                 "name": "Image compare",
                 "less": ["image-compare"],
@@ -404,17 +421,32 @@
             "input_comp":{
                 "name": "Input",
                 "less": ["input"],
-                "js": ["plugins/input"]
+                "js": ["plugins/input"],
+                "dependencies": {
+                    "less": [
+                        "inputs"
+                    ]
+                }
             },
             "input_material_comp":{
-                "name": "Material Input",
+                "name": "Input Material",
                 "less": ["input-material"],
-                "js": ["plugins/input-material"]
+                "js": ["plugins/input-material"],
+                "dependencies": {
+                    "less": [
+                        "inputs"
+                    ]
+                }
             },
             "keypad_comp":{
                 "name": "Keypad",
                 "less": ["keypad"],
-                "js": ["plugins/keypad"]
+                "js": ["plugins/keypad"],
+                "dependencies": {
+                    "less": [
+                        "inputs", "input"
+                    ]
+                }
             },
             "list_comp":{
                 "name": "List",
@@ -433,10 +465,18 @@
             "media_player_comp":{
                 "name": "Media players",
                 "less": ["media-player"],
-                "js": ["plugins/audio", "plugins/video"]
+                "js": ["plugins/audio", "plugins/video"],
+                "dependencies": {
+                    "je": [
+                        "plugins/slider"
+                    ],
+                    "less": [
+                        "buttons", "slider"
+                    ]
+                }
             },
             "menu_comp":{
-                "name": "Menu",
+                "name": "D-menu, V-menu",
                 "less": ["menu"]
             },
             "navview_comp":{
@@ -500,6 +540,9 @@
                 "dependencies": {
                     "js": [
                         "plugins/dropdown"
+                    ],
+                    "less": [
+                        "inputs"
                     ]
                 }
             },
@@ -536,6 +579,9 @@
                 "dependencies": {
                     "js": [
                         "plugins/input"
+                    ],
+                    "less": [
+                        "inputs"
                     ]
                 }
             },
@@ -572,7 +618,7 @@
                         "utils/i18n", "utils/export", "plugins/checkbox", "plugins/radio", "plugins/spinner", "plugins/input"
                     ],
                     "less": [
-                        "buttons"
+                        "buttons", "inputs"
                     ]
                 }
             },
@@ -582,19 +628,29 @@
                 "js": ["plugins/tabs"]
             },
             "tabs_material_comp":{
-                "name": "Material Tabs",
+                "name": "Tabs Material",
                 "less": ["tabs-material"],
                 "js": ["plugins/tabs-material"]
             },
             "tag_input_comp":{
                 "name": "Tag input",
                 "less": ["tag-input"],
-                "js": ["plugins/tag-input"]
+                "js": ["plugins/tag-input"],
+                "dependencies": {
+                    "less": [
+                        "inputs"
+                    ]
+                }
             },
             "textarea_comp":{
                 "name": "Textarea",
                 "less": ["textarea"],
-                "js": ["plugins/textarea"]
+                "js": ["plugins/textarea"],
+                "dependencies": {
+                    "less": [
+                        "inputs"
+                    ]
+                }
             },
             "tile_comp":{
                 "name": "Tiles",
@@ -608,6 +664,9 @@
                 "dependencies": {
                     "js": [
                         "utils/i18n", "plugins/calendar"
+                    ],
+                    "less": [
+                        "wheelpicker"
                     ]
                 }
             },
@@ -621,9 +680,18 @@
                 "less": ["treeview"],
                 "js": ["plugins/treeview"]
             },
+            "t_menu_comp":{
+                "name": "T-menu",
+                "less": ["t-menu"]
+            },
             "validator_comp":{
                 "name": "Validator",
-                "js": ["plugins/validator"]
+                "js": ["plugins/validator"],
+                "dependencies": {
+                    "js": [
+                        "utils/colors"
+                    ]
+                }
             },
             "window_comp":{
                 "name": "Window",

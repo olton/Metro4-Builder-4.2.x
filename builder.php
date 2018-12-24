@@ -218,6 +218,7 @@ if (count($less) > 0) {
 if (count($js) > 0) {
 
     if (!in_array("utils/utilities.js", $js)) array_unshift($js, "utils/utilities.js");
+    if (!in_array("utils/extensions.js", $js)) array_unshift($js, "utils/extensions.js");
 
     $js_complete_file_content .= $copy;
     $js_complete_file_content .= $js_head;

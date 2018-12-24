@@ -1,8 +1,8 @@
 {
   "author": "Sergey Pimenov",
   "name": "metro4-builder",
-  "version": "4.2.27",
-  "build": "705",
+  "version": "4.2.31",
+  "build": "710",
   "version_suffix": "",
   "description": "Metro 4 Builder",
   "keywords": [
@@ -26,7 +26,7 @@
   "license": "MIT",
   "dependencies": {
     "jquery": ">=3.0.0",
-    "less": "^3.8.1",
+    "less": "^3.9.0",
     "less-plugin-clean-css": "^1.5.1",
     "uglify-js": "^3.4.9"
   }

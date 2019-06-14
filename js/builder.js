@@ -8,11 +8,11 @@ var App = {
     create: function(){
         var that = this;
 
-        $.get("config.json", function(data){
+        $.json("config.json").then(function(data){
             that.config = data;
 
             that.build();
-        })
+        });
     },
 
     build: function () {
@@ -22,13 +22,13 @@ var App = {
 
         $.each(config.groups, function(key, val){
             var group_name = val;
-            var group = $("<div>").addClass("items-group " + "group-"+key).appendTo(container);
+            var group = $("<div class='border bd-default p-4 mb-4'>").addClass("items-group " + "group-"+key).appendTo(container);
             var group_title = $("<h2>").addClass("text-light").html(group_name).appendTo(group);
 
             $.each(config[key], function(part_key, part_data){
                 var part = $("<div>").addClass("items-part " + "part-"+part_key).appendTo(group);
-                var part_title = $("<h5>").html(config.parts[part_key]).appendTo(part);
-                var part_select = $("<input type='checkbox' data-style='2' data-role='checkbox' onclick='App.selectAll(this)'>").appendTo(part_title);
+
+                $("<div class='border-bottom bd-default'><input type='checkbox' data-style='2' data-role='checkbox' data-caption='"+config.parts[part_key]+"' onclick='App.selectAll(this)'></div>").appendTo(part);
 
                 $.each(part_data, function(item_key, item_data){
                     var element = $("<input name='item[]' data-style='2' type='checkbox' data-role='checkbox' data-caption='"+item_data.name+"' value='"+item_key+"'>");
